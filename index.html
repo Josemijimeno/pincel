@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pincel — El juego de dibujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/ably@2/ably.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0f0e0c;
+    --paper: #f5f0e8;
+    --cream: #ede8db;
+    --accent: #e84c1e;
+    --accent2: #1e7ae8;
+    --success: #1ea854;
+    --warn: #e8a81e;
+    --canvas-bg: #fffef9;
+    --border: #0f0e0c;
+    --radius: 4px;
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--display);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; width: 100%; height: 100%; position: absolute; inset: 0; }
+  .screen.active { display: flex; }
+
+  /* ── LOBBY ── */
+  #lobby {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: var(--paper);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #lobby::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(15,14,12,0.06) 39px, rgba(15,14,12,0.06) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(15,14,12,0.06) 39px, rgba(15,14,12,0.06) 40px);
+    pointer-events: none;
+  }
+
+  .logo-wrap {
+    position: relative;
+    margin-bottom: 48px;
+    text-align: center;
+  }
+
+  .logo-wrap h1 {
+    font-size: clamp(64px, 10vw, 120px);
+    font-weight: 800;
+    letter-spacing: -3px;
+    line-height: 1;
+    position: relative;
+  }
+
+  .logo-wrap h1 span.r { color: var(--accent); }
+  .logo-wrap h1 span.b { color: var(--accent2); }
+
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-top: 8px;
+  }
+
+  .lobby-card {
+    background: var(--canvas-bg);
+    border: 2px solid var(--border);
+    border-radius: 2px;
+    padding: 40px;
+    width: min(480px, 92vw);
+    position: relative;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+
+  .lobby-card h2 {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 28px;
+    letter-spacing: -0.5px;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+  .field-group label { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.6; }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    background: var(--paper);
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    text-decoration: none;
+    box-shadow: 4px 4px 0 var(--ink);
+    width: 100%;
+  }
+
+  .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-secondary { background: var(--paper); color: var(--ink); }
+  .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 4px 4px 0 rgba(232,76,30,0.3); }
+  .btn-blue { background: var(--accent2); color: #fff; border-color: var(--accent2); box-shadow: 4px 4px 0 rgba(30,122,232,0.3); }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    opacity: 0.4;
+  }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--ink); }
+
+  .tabs { display: flex; border: 2px solid var(--ink); border-radius: var(--radius); overflow: hidden; margin-bottom: 28px; }
+  .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; transition: background 0.15s; }
+  .tab.active { background: var(--ink); color: var(--paper); }
+
+  /* ── WAITING ROOM ── */
+  #waiting {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .room-code-display {
+    text-align: center;
+  }
+
+  .room-code-display .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 8px;
+  }
+
+  .room-code-display .code {
+    font-family: var(--mono);
+    font-size: clamp(42px, 8vw, 72px);
+    font-weight: 700;
+    letter-spacing: 8px;
+    border: 3px solid var(--ink);
+    padding: 16px 32px;
+    background: var(--canvas-bg);
+    box-shadow: 6px 6px 0 var(--ink);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+
+  .room-code-display .code:active { transform: translate(3px,3px); box-shadow: 3px 3px 0 var(--ink); }
+
+  .players-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    max-width: 500px;
+  }
+
+  .player-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--canvas-bg);
+    animation: chipIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  .player-chip.host::after { content: '👑'; margin-left: 4px; }
+  .player-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+  @keyframes chipIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ── GAME ── */
+  #game {
+    flex-direction: column;
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  /* Header */
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 2px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  .word-display {
+    font-family: var(--mono);
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    letter-spacing: 8px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .timer-wrap { display: flex; align-items: center; gap: 8px; }
+
+  .timer {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    min-width: 48px;
+    text-align: center;
+    transition: color 0.3s;
+  }
+
+  .timer.urgent { color: var(--accent); animation: pulse 0.5s infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+
+  .round-info {
+    font-family: var(--mono);
+    font-size: 11px;
+    opacity: 0.6;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* Main layout */
+  .game-body {
+    display: grid;
+    grid-template-columns: 180px 1fr 200px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    .game-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+    .sidebar-left { display: none; }
+  }
+
+  /* Sidebar left - scores */
+  .sidebar-left {
+    border-right: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    background: var(--cream);
+    overflow-y: auto;
+  }
+
+  .sidebar-title {
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--ink);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .score-list { display: flex; flex-direction: column; }
+
+  .score-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(15,14,12,0.1);
+    transition: background 0.15s;
+    font-size: 13px;
+  }
+
+  .score-item.drawing { background: rgba(232,76,30,0.08); }
+  .score-item.guessed { background: rgba(30,168,84,0.08); }
+
+  .score-rank {
+    font-family: var(--mono);
+    font-size: 10px;
+    opacity: 0.4;
+    min-width: 16px;
+  }
+
+  .score-name { flex: 1; font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .score-pts { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+  .score-icon { font-size: 14px; }
+
+  /* Canvas area */
+  .canvas-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--canvas-bg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #drawCanvas {
+    border: none;
+    cursor: crosshair;
+    display: block;
+    touch-action: none;
+  }
+
+  /* Drawing toolbar */
+  .toolbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--ink);
+    flex-wrap: wrap;
+  }
+
+  .toolbar.hidden { display: none; }
+
+  .color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .color-swatch:hover { transform: scale(1.2); }
+  .color-swatch.active { border-color: white; transform: scale(1.15); }
+
+  .toolbar-sep { width: 2px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 1px; }
+
+  .size-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .size-btn:hover, .size-btn.active { border-color: white; background: rgba(255,255,255,0.15); }
+
+  .size-dot { background: white; border-radius: 50%; }
+
+  .tool-btn {
+    padding: 4px 12px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 4px;
+    background: transparent;
+    color: white;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .tool-btn:hover { border-color: white; background: rgba(255,255,255,0.15); }
+  .tool-btn.active { background: white; color: var(--ink); border-color: white; }
+
+  /* Sidebar right - chat */
+  .sidebar-right {
+    border-left: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    background: var(--canvas-bg);
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scroll-behavior: smooth;
+  }
+
+  .chat-msg {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    animation: msgIn 0.2s ease;
+    word-break: break-word;
+  }
+
+  @keyframes msgIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .chat-msg .name { font-weight: 700; }
+  .chat-msg.system { opacity: 0.5; font-style: italic; }
+  .chat-msg.correct { color: var(--success); font-weight: 700; }
+  .chat-msg.close { color: var(--warn); }
+
+  .chat-input-wrap {
+    border-top: 2px solid var(--ink);
+    padding: 10px;
+    display: flex;
+    gap: 6px;
+    background: var(--cream);
+  }
+
+  #chatInput {
+    flex: 1;
+    padding: 8px 10px;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--canvas-bg);
+    color: var(--ink);
+    outline: none;
+  }
+
+  #chatInput:focus { border-color: var(--accent); }
+
+  .send-btn {
+    padding: 8px 12px;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .send-btn:hover { opacity: 0.8; }
+
+  /* Word selection modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,14,12,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    background: var(--canvas-bg);
+    border: 3px solid var(--ink);
+    border-radius: 2px;
+    padding: 40px;
+    box-shadow: 8px 8px 0 var(--ink);
+    text-align: center;
+    max-width: 400px;
+    width: 90vw;
+    animation: modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes modalIn { from { transform: scale(0.8) translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .modal-box h2 { font-size: 20px; margin-bottom: 8px; }
+  .modal-box p { font-family: var(--mono); font-size: 12px; opacity: 0.5; margin-bottom: 24px; }
+
+  .word-choices { display: flex; flex-direction: column; gap: 10px; }
+
+  .word-choice {
+    padding: 14px 20px;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    background: var(--paper);
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.1s;
+    box-shadow: 4px 4px 0 var(--ink);
+    letter-spacing: -0.5px;
+  }
+
+  .word-choice:hover { background: var(--ink); color: var(--paper); transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--accent); }
+
+  /* Round end overlay */
+  .round-end {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,14,12,0.9);
+    z-index: 90;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    color: var(--paper);
+  }
+
+  .round-end.active { display: flex; }
+
+  .round-end h2 { font-size: clamp(28px, 5vw, 48px); font-weight: 800; }
+
+  .round-end .answer-reveal {
+    font-family: var(--mono);
+    font-size: clamp(20px, 4vw, 36px);
+    color: var(--accent);
+    letter-spacing: 4px;
+  }
+
+  .score-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    max-width: 500px;
+  }
+
+  .score-pill {
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  .score-pill.gainer { border-color: var(--success); color: var(--success); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    font-family: var(--mono);
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 200;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Confetti canvas */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 300;
+  }
+
+  /* Waiting for drawer */
+  .drawer-notice {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .drawer-notice .big { font-size: 48px; margin-bottom: 12px; }
+  .drawer-notice p { font-family: var(--mono); font-size: 13px; opacity: 0.5; }
+
+  /* ── SCOREBOARD (end) ── */
+  #scoreboard {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .final-podium { display: flex; align-items: flex-end; justify-content: center; gap: 12px; }
+
+  .podium-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .podium-name {
+    font-weight: 800;
+    font-size: 14px;
+    max-width: 90px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .podium-pts { font-family: var(--mono); font-size: 12px; opacity: 0.6; }
+
+  .podium-bar {
+    border: 2px solid var(--ink);
+    border-radius: 2px 2px 0 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 8px;
+    font-size: 24px;
+    width: 80px;
+  }
+
+  .podium-bar.p1 { background: #FFD700; height: 130px; box-shadow: 4px 4px 0 var(--ink); }
+  .podium-bar.p2 { background: #C0C0C0; height: 90px; box-shadow: 4px 4px 0 var(--ink); }
+  .podium-bar.p3 { background: #CD7F32; height: 60px; box-shadow: 4px 4px 0 var(--ink); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(15,14,12,0.2); border-radius: 2px; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-6px)}
+    75%{transform:translateX(6px)}
+  }
+
+  .shake { animation: shake 0.3s ease; }
+
+  /* Copy hint */
+  .copy-hint { font-family: var(--mono); font-size: 10px; opacity: 0.4; text-align: center; margin-top: 6px; cursor: default; }
+
+  /* Error state */
+  .error-msg { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 8px; min-height: 18px; }
+
+  /* Status badge */
+  .status-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: rgba(255,255,255,0.1);
+  }
+</style>
+</head>
+<body>
+
+<!-- ─────────── LOBBY ─────────── -->
+<div id="lobby" class="screen active">
+  <div class="logo-wrap">
+    <h1>P<span class="r">IN</span>C<span class="b">EL</span></h1>
+    <div class="logo-sub">El juego de dibujo en tiempo real</div>
+  </div>
+
+  <div class="lobby-card">
+    <div class="tabs">
+      <div class="tab active" data-tab="create">Crear sala</div>
+      <div class="tab" data-tab="join">Unirse</div>
+    </div>
+
+    <!-- CREATE -->
+    <div id="tab-create">
+      <div class="field-group">
+        <label>Tu nombre</label>
+        <input type="text" id="createName" placeholder="Ej: Picasso" maxlength="16" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label>Rondas</label>
+        <select id="createRounds">
+          <option value="3">3 rondas</option>
+          <option value="5" selected>5 rondas</option>
+          <option value="7">7 rondas</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Tiempo por turno</label>
+        <select id="createTime">
+          <option value="60">60 segundos</option>
+          <option value="90" selected>90 segundos</option>
+          <option value="120">120 segundos</option>
+        </select>
+      </div>
+      <div class="error-msg" id="createError"></div>
+      <button class="btn btn-primary" id="btnCreate">Crear sala →</button>
+    </div>
+
+    <!-- JOIN -->
+    <div id="tab-join" style="display:none">
+      <div class="field-group">
+        <label>Tu nombre</label>
+        <input type="text" id="joinName" placeholder="Ej: Dalí" maxlength="16" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <label>Código de sala</label>
+        <input type="text" id="joinCode" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:20px" autocomplete="off">
+      </div>
+      <div class="error-msg" id="joinError"></div>
+      <button class="btn btn-blue" id="btnJoin">Unirse →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── WAITING ROOM ─────────── -->
+<div id="waiting" class="screen">
+  <div class="room-code-display">
+    <div class="label">Código de sala</div>
+    <div class="code" id="displayCode" title="Haz clic para copiar">????</div>
+    <div class="copy-hint">Haz clic para copiar · Comparte con tus amigos</div>
+  </div>
+
+  <div>
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.5;text-align:center;margin-bottom:12px;">Jugadores conectados</div>
+    <div class="players-grid" id="playersGrid"></div>
+  </div>
+
+  <div id="hostControls" style="display:none;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:300px;">
+    <button class="btn btn-primary" id="btnStart">Iniciar partida</button>
+    <div style="font-family:var(--mono);font-size:11px;opacity:.4;">Mínimo 2 jugadores</div>
+  </div>
+
+  <div id="guestWait" style="font-family:var(--mono);font-size:13px;opacity:.5;">Esperando a que el anfitrión inicie...</div>
+</div>
+
+<!-- ─────────── GAME ─────────── -->
+<div id="game" class="screen">
+  <div class="game-header">
+    <div class="round-info" id="roundInfo">RONDA 1/5</div>
+    <div class="word-display" id="wordDisplay">_ _ _ _ _</div>
+    <div class="timer-wrap">
+      <div class="timer" id="timerDisplay">90</div>
+    </div>
+  </div>
+
+  <div class="game-body">
+    <!-- Scores -->
+    <div class="sidebar-left">
+      <div class="sidebar-title">Puntuación</div>
+      <div class="score-list" id="scoreList"></div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="drawCanvas"></canvas>
+      <div id="drawerNotice" class="drawer-notice" style="display:none">
+        <div class="big">🎨</div>
+        <p id="drawerNoticeName">Alguien está dibujando...</p>
+      </div>
+      <div class="toolbar" id="toolbar">
+        <!-- Colors -->
+        <div class="color-swatch active" data-color="#0f0e0c" style="background:#0f0e0c"></div>
+        <div class="color-swatch" data-color="#ffffff" style="background:#ffffff;border:2px solid #ccc"></div>
+        <div class="color-swatch" data-color="#e84c1e" style="background:#e84c1e"></div>
+        <div class="color-swatch" data-color="#1e7ae8" style="background:#1e7ae8"></div>
+        <div class="color-swatch" data-color="#1ea854" style="background:#1ea854"></div>
+        <div class="color-swatch" data-color="#e8a81e" style="background:#e8a81e"></div>
+        <div class="color-swatch" data-color="#9b59b6" style="background:#9b59b6"></div>
+        <div class="color-swatch" data-color="#e91e8c" style="background:#e91e8c"></div>
+        <div class="color-swatch" data-color="#795548" style="background:#795548"></div>
+        <div class="toolbar-sep"></div>
+        <!-- Sizes -->
+        <button class="size-btn active" data-size="3"><div class="size-dot" style="width:6px;height:6px"></div></button>
+        <button class="size-btn" data-size="8"><div class="size-dot" style="width:12px;height:12px"></div></button>
+        <button class="size-btn" data-size="16"><div class="size-dot" style="width:20px;height:20px"></div></button>
+        <div class="toolbar-sep"></div>
+        <!-- Tools -->
+        <button class="tool-btn active" id="toolPen">✏ Pluma</button>
+        <button class="tool-btn" id="toolEraser">⌫ Borrar</button>
+        <button class="tool-btn" id="toolFill">🪣 Bote</button>
+        <button class="tool-btn" id="toolClear">🗑 Limpiar</button>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="sidebar-right">
+      <div style="padding:10px 12px;border-bottom:2px solid var(--ink);font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.5;">Chat / Respuestas</div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-wrap">
+        <input type="text" id="chatInput" placeholder="Escribe tu respuesta..." maxlength="60" autocomplete="off">
+        <button class="send-btn" id="sendBtn">↵</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── SCOREBOARD ─────────── -->
+<div id="scoreboard" class="screen">
+  <h2 style="font-size:clamp(28px,5vw,48px);font-weight:800;">¡Fin del juego!</h2>
+  <div class="final-podium" id="finalPodium"></div>
+  <div id="fullRanking" style="font-family:var(--mono);font-size:13px;opacity:.6;text-align:center;line-height:2;"></div>
+  <button class="btn btn-primary" id="btnRestart" style="max-width:240px;">Jugar de nuevo</button>
+</div>
+
+<!-- ─────────── WORD MODAL ─────────── -->
+<div class="modal-overlay" id="wordModal">
+  <div class="modal-box">
+    <h2>¡Te toca dibujar!</h2>
+    <p>Elige una palabra para dibujar</p>
+    <div class="word-choices" id="wordChoices"></div>
+  </div>
+</div>
+
+<!-- ─────────── ROUND END ─────────── -->
+<div class="round-end" id="roundEnd">
+  <h2 id="roundEndTitle">Fin del turno</h2>
+  <div class="answer-reveal" id="answerReveal"></div>
+  <div class="score-summary" id="scoreSummary"></div>
+</div>
+
+<!-- ─────────── TOAST ─────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- Confetti -->
+<canvas id="confettiCanvas"></canvas>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  PINCEL — FULL GAME ENGINE
+// ════════════════════════════════════════════════════════
+
+const ABLY_KEY = 'YOUR_ABLY_KEY_HERE'; // <-- REEMPLAZA CON TU CLAVE ABLY
+
+// ── Word bank ──
+const WORDS = [
+  'gato','perro','casa','árbol','coche','playa','luna','sol','mar','montaña',
+  'libro','puerta','ventana','silla','mesa','ordenador','teléfono','reloj','zapato','sombrero',
+  'guitarra','piano','violín','trompeta','batería','micrófono','altavoz',
+  'pizza','hamburguesa','sushi','pasta','helado','tarta','café','cerveza','vino',
+  'avión','barco','tren','bicicleta','moto','camión','submarino','cohete','helicóptero',
+  'tiburón','delfín','ballena','pulpo','cangrejo','medusa','tortuga','pingüino','cocodrilo',
+  'elefante','jirafa','cebra','hipopótamo','rinoceronte','gorila','koala','panda','kiwi',
+  'volcán','castillo','faro','puente','estatua','pirámide','iglesia','museo','estadio',
+  'espada','escudo','arco','flecha','hacha','lanza','magia','dragón','vampiro','fantasma',
+  'astronauta','robot','platillo volante','dinosaurio','momia','pirata','ninja','superhéroe',
+  'arcoíris','tormenta','nieve','tornado','relámpago','niebla','desierto',
+  'cámara','televisión','videojuego','auriculares','tablet','impresora','ratón','teclado',
+  'globo','cometa','abanico','paraguas','linterna','vela','mapa','brújula','lupa',
+  'cactus','girasol','champiñón','plátano','sandía','piña','fresa','uva','cereza',
+  'espejo','candado','llave','tijeras','clavo','martillo','pincel','cubo','escalera',
+  'palomitas','algodón de azúcar','noria','tobogán','columpio','tienda de campaña',
+  'medalla','trofeo','diploma','corona','anillo','collar','pulsera',
+  'nariz','oreja','ceja','labio','barbilla','hombro','codo','rodilla','talón',
+];
+
+// ── State ──
+let myId = '';
+let myName = '';
+let roomCode = '';
+let isHost = false;
+let isDrawing = false;
+let players = {}; // id -> {name, score, guessed}
+let currentWord = '';
+let currentDrawerId = '';
+let roundNumber = 0;
+let totalRounds = 5;
+let turnTime = 90;
+let timerInterval = null;
+let timerLeft = 0;
+let gameActive = false;
+let turnOrder = [];
+let turnIndex = 0;
+
+let ably = null;
+let channel = null;
+
+// ── Canvas ──
+let canvas, ctx;
+let drawing = false;
+let lastX = 0, lastY = 0;
+let currentColor = '#0f0e0c';
+let currentSize = 3;
+let currentTool = 'pen';
+let strokeBatch = [];
+let batchTimer = null;
+
+// ════════════════════════════════════
+//  INIT
+// ════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  setupLobbyUI();
+  canvas = document.getElementById('drawCanvas');
+  ctx = canvas.getContext('2d');
+  setupCanvas();
+  setupToolbar();
+  setupChat();
+
+  // Check URL params (for joining via link)
+  const params = new URLSearchParams(location.search);
+  if (params.get('room')) {
+    document.querySelector('[data-tab="join"]').click();
+    document.getElementById('joinCode').value = params.get('room').toUpperCase();
+  }
+});
+
+// ════════════════════════════════════
+//  LOBBY UI
+// ════════════════════════════════════
+function setupLobbyUI() {
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-create').style.display = tab.dataset.tab === 'create' ? 'block' : 'none';
+      document.getElementById('tab-join').style.display = tab.dataset.tab === 'join' ? 'block' : 'none';
+    });
+  });
+
+  document.getElementById('btnCreate').addEventListener('click', handleCreate);
+  document.getElementById('btnJoin').addEventListener('click', handleJoin);
+
+  document.getElementById('createName').addEventListener('keydown', e => { if (e.key === 'Enter') handleCreate(); });
+  document.getElementById('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') handleJoin(); });
+  document.getElementById('joinCode').addEventListener('input', e => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  });
+}
+
+function handleCreate() {
+  const name = document.getElementById('createName').value.trim();
+  if (!name) { showError('createError', 'Necesitas un nombre'); return; }
+  totalRounds = parseInt(document.getElementById('createRounds').value);
+  turnTime = parseInt(document.getElementById('createTime').value);
+  myName = name;
+  isHost = true;
+  roomCode = genCode();
+  joinRoom(roomCode);
+}
+
+function handleJoin() {
+  const name = document.getElementById('joinName').value.trim();
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  if (!name) { showError('joinError', 'Necesitas un nombre'); return; }
+  if (code.length !== 4) { showError('joinError', 'El código debe tener 4 caracteres'); return; }
+  myName = name;
+  isHost = false;
+  roomCode = code;
+  joinRoom(code);
+}
+
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.parentElement.classList.add('shake');
+  setTimeout(() => el.parentElement.classList.remove('shake'), 300);
+  setTimeout(() => el.textContent = '', 3000);
+}
+
+// ════════════════════════════════════
+//  ABLY CONNECTION
+// ════════════════════════════════════
+function joinRoom(code) {
+  myId = 'player_' + Math.random().toString(36).slice(2, 10);
+
+  try {
+    ably = new Ably.Realtime({ key: ABLY_KEY, clientId: myId });
+  } catch(e) {
+    alert('Error conectando. Verifica tu clave Ably en el código.');
+    return;
+  }
+
+  ably.connection.on('connected', () => {
+    channel = ably.channels.get('pincel:' + code);
+
+    channel.presence.enter({ name: myName, score: 0, isHost });
+
+    channel.presence.subscribe('enter', onPlayerEnter);
+    channel.presence.subscribe('leave', onPlayerLeave);
+    channel.presence.subscribe('update', onPlayerUpdate);
+
+    channel.subscribe('game:start', onGameStart);
+    channel.subscribe('game:word-options', onWordOptions);
+    channel.subscribe('game:word-chosen', onWordChosen);
+    channel.subscribe('game:draw', onRemoteDraw);
+    channel.subscribe('game:clear', onRemoteClear);
+    channel.subscribe('game:chat', onChatMsg);
+    channel.subscribe('game:guess', onGuess);
+    channel.subscribe('game:turn-end', onTurnEnd);
+    channel.subscribe('game:end', onGameEnd);
+    channel.subscribe('game:sync-canvas', onSyncCanvas);
+    channel.subscribe('game:request-sync', onRequestSync);
+
+    // Get existing presence
+    channel.presence.get((err, members) => {
+      if (err) return;
+      members.forEach(m => {
+        if (m.clientId !== myId) {
+          players[m.clientId] = { name: m.data.name, score: m.data.score || 0, guessed: false };
+        }
+      });
+      players[myId] = { name: myName, score: 0, guessed: false };
+
+      showScreen('waiting');
+      setupWaitingRoom();
+    });
+  });
+
+  ably.connection.on('failed', () => {
+    alert('No se pudo conectar. Verifica tu clave Ably.');
+  });
+}
+
+// ════════════════════════════════════
+//  PRESENCE HANDLERS
+// ════════════════════════════════════
+function onPlayerEnter(member) {
+  if (member.clientId === myId) return;
+  players[member.clientId] = { name: member.data.name, score: member.data.score || 0, guessed: false };
+  updatePlayersGrid();
+  updateScoreList();
+  addChatMsg({ type:'system', text: `${member.data.name} se ha unido.` });
+
+  // New player joining mid-game: send canvas sync
+  if (gameActive && isDrawing) {
+    setTimeout(() => sendCanvasSync(), 500);
+  }
+}
+
+function onPlayerLeave(member) {
+  const name = players[member.clientId]?.name || 'Alguien';
+  delete players[member.clientId];
+  updatePlayersGrid();
+  updateScoreList();
+  addChatMsg({ type:'system', text: `${name} se ha ido.` });
+}
+
+function onPlayerUpdate(member) {
+  if (players[member.clientId]) {
+    players[member.clientId].name = member.data.name;
+    players[member.clientId].score = member.data.score || 0;
+  }
+}
+
+// ════════════════════════════════════
+//  WAITING ROOM
+// ════════════════════════════════════
+function setupWaitingRoom() {
+  const codeEl = document.getElementById('displayCode');
+  codeEl.textContent = roomCode;
+  codeEl.addEventListener('click', copyCode);
+
+  document.getElementById('hostControls').style.display = isHost ? 'flex' : 'none';
+  document.getElementById('guestWait').style.display = isHost ? 'none' : 'block';
+
+  document.getElementById('btnStart').addEventListener('click', startGame);
+
+  // Update share URL
+  const url = `${location.origin}${location.pathname}?room=${roomCode}`;
+  history.replaceState(null, '', url);
+
+  updatePlayersGrid();
+}
+
+function updatePlayersGrid() {
+  const grid = document.getElementById('playersGrid');
+  grid.innerHTML = Object.entries(players).map(([id, p]) => `
+    <div class="player-chip ${isHost && id === myId ? 'host' : ''}">
+      <div class="dot"></div>
+      ${sanitize(p.name)}${id === myId ? ' (tú)' : ''}
+    </div>
+  `).join('');
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(roomCode).then(() => showToast('¡Código copiado!'));
+}
+
+// ════════════════════════════════════
+//  GAME START
+// ════════════════════════════════════
+function startGame() {
+  const pCount = Object.keys(players).length;
+  if (pCount < 2) { showToast('Necesitas al menos 2 jugadores'); return; }
+
+  turnOrder = Object.keys(players);
+  shuffleArray(turnOrder);
+  roundNumber = 1;
+  turnIndex = 0;
+
+  // Reset scores
+  Object.keys(players).forEach(id => { players[id].score = 0; });
+
+  channel.publish('game:start', {
+    turnOrder,
+    totalRounds,
+    turnTime,
+    roundNumber: 1,
+  });
+}
+
+function onGameStart(msg) {
+  const { turnOrder: to, totalRounds: tr, turnTime: tt, roundNumber: rn } = msg.data;
+  turnOrder = to;
+  totalRounds = tr;
+  turnTime = tt;
+  roundNumber = rn;
+  turnIndex = 0;
+
+  Object.keys(players).forEach(id => { players[id].score = 0; players[id].guessed = false; });
+  gameActive = true;
+
+  showScreen('game');
+  resizeCanvas();
+  updateScoreList();
+  updateRoundInfo();
+
+  startTurn();
+}
+
+// ════════════════════════════════════
+//  TURN LOGIC
+// ════════════════════════════════════
+function startTurn() {
+  clearCanvas();
+  Object.keys(players).forEach(id => { players[id].guessed = false; });
+
+  currentDrawerId = turnOrder[turnIndex % turnOrder.length];
+  isDrawing = (currentDrawerId === myId);
+
+  document.getElementById('toolbar').classList.toggle('hidden', !isDrawing);
+  document.getElementById('chatInput').disabled = isDrawing;
+  document.getElementById('chatInput').placeholder = isDrawing ? 'Estás dibujando...' : 'Escribe tu respuesta...';
+  canvas.style.cursor = isDrawing ? 'crosshair' : 'default';
+
+  if (isDrawing) {
+    // Pick 3 random words
+    const words = pickWords(3);
+    channel.publish('game:word-options', { drawerId: myId, words });
+  } else {
+    const drawerName = players[currentDrawerId]?.name || 'Alguien';
+    document.getElementById('drawerNotice').style.display = 'flex';
+    document.getElementById('drawerNoticeName').textContent = `${drawerName} está dibujando...`;
+    addChatMsg({ type:'system', text: `${drawerName} está dibujando.` });
+  }
+
+  updateScoreList();
+}
+
+function onWordOptions(msg) {
+  if (msg.data.drawerId !== myId) return;
+  document.getElementById('drawerNotice').style.display = 'none';
+  showWordModal(msg.data.words);
+}
+
+function showWordModal(words) {
+  const modal = document.getElementById('wordModal');
+  const choices = document.getElementById('wordChoices');
+  choices.innerHTML = words.map(w => `
+    <div class="word-choice" data-word="${w}">${w}</div>
+  `).join('');
+  modal.classList.add('active');
+
+  choices.querySelectorAll('.word-choice').forEach(el => {
+    el.addEventListener('click', () => {
+      modal.classList.remove('active');
+      chooseWord(el.dataset.word);
+    });
+  });
+}
+
+function chooseWord(word) {
+  currentWord = word;
+  const masked = maskWord(word);
+  document.getElementById('wordDisplay').textContent = word; // Drawer sees the word
+  channel.publish('game:word-chosen', {
+    drawerId: myId,
+    masked,
+    length: word.length,
+    turnTime,
+  });
+  startTimer(turnTime);
+}
+
+function onWordChosen(msg) {
+  if (msg.data.drawerId === myId) return;
+  document.getElementById('drawerNotice').style.display = 'none';
+  document.getElementById('wordDisplay').textContent = msg.data.masked;
+  startTimer(msg.data.turnTime);
+
+  // Request canvas sync
+  channel.publish('game:request-sync', { fromId: myId });
+}
+
+function onRequestSync(msg) {
+  if (!isDrawing) return;
+  sendCanvasSync();
+}
+
+function sendCanvasSync() {
+  const dataUrl = canvas.toDataURL('image/png');
+  channel.publish('game:sync-canvas', { dataUrl });
+}
+
+function onSyncCanvas(msg) {
+  if (isDrawing) return;
+  const img = new Image();
+  img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+  img.src = msg.data.dataUrl;
+}
+
+// ════════════════════════════════════
+//  TIMER
+// ════════════════════════════════════
+function startTimer(seconds) {
+  clearInterval(timerInterval);
+  timerLeft = seconds;
+  updateTimerDisplay();
+
+  timerInterval = setInterval(() => {
+    timerLeft--;
+    updateTimerDisplay();
+    if (timerLeft <= 0) {
+      clearInterval(timerInterval);
+      if (isDrawing || isHost) endTurn(false);
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('timerDisplay');
+  el.textContent = timerLeft;
+  el.classList.toggle('urgent', timerLeft <= 10);
+}
+
+// ════════════════════════════════════
+//  DRAWING
+// ════════════════════════════════════
+function setupCanvas() {
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  canvas.addEventListener('pointerdown', startDraw);
+  canvas.addEventListener('pointermove', draw);
+  canvas.addEventListener('pointerup', stopDraw);
+  canvas.addEventListener('pointerleave', stopDraw);
+  canvas.setPointerCapture;
+}
+
+function resizeCanvas() {
+  const wrap = document.getElementById('canvasWrap');
+  const toolbarH = document.getElementById('toolbar').offsetHeight;
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight - toolbarH;
+  const size = Math.min(w, h);
+
+  // Save current drawing
+  const imgData = canvas.width > 0 ? ctx.getImageData(0,0,canvas.width,canvas.height) : null;
+
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+
+  ctx.fillStyle = '#fffef9';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  if (imgData) ctx.putImageData(imgData, 0, 0);
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left),
+    y: (e.clientY - rect.top)
+  };
+}
+
+function startDraw(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  drawing = true;
+  const pos = getPos(e);
+  lastX = pos.x; lastY = pos.y;
+
+  if (currentTool === 'fill') {
+    fillAt(Math.round(pos.x), Math.round(pos.y), currentColor);
+    batchStroke({ type:'fill', x: Math.round(pos.x), y: Math.round(pos.y), color: currentColor });
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, (currentTool === 'eraser' ? currentSize * 2 : currentSize) / 2, 0, Math.PI*2);
+  ctx.fillStyle = currentTool === 'eraser' ? '#fffef9' : currentColor;
+  ctx.fill();
+}
+
+function draw(e) {
+  if (!drawing || !isDrawing) return;
+  e.preventDefault();
+  const pos = getPos(e);
+
+  if (currentTool === 'fill') return;
+
+  const color = currentTool === 'eraser' ? '#fffef9' : currentColor;
+  const size = currentTool === 'eraser' ? currentSize * 2 : currentSize;
+
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  batchStroke({ type:'line', x1:lastX, y1:lastY, x2:pos.x, y2:pos.y, color, size });
+
+  lastX = pos.x; lastY = pos.y;
+}
+
+function stopDraw(e) {
+  if (!drawing) return;
+  drawing = false;
+  flushBatch();
+}
+
+function batchStroke(stroke) {
+  strokeBatch.push(stroke);
+  if (!batchTimer) {
+    batchTimer = setTimeout(flushBatch, 30);
+  }
+}
+
+function flushBatch() {
+  if (strokeBatch.length === 0) return;
+  channel.publish('game:draw', { strokes: strokeBatch });
+  strokeBatch = [];
+  batchTimer = null;
+}
+
+function onRemoteDraw(msg) {
+  if (isDrawing) return;
+  const { strokes } = msg.data;
+  strokes.forEach(s => {
+    if (s.type === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(s.x1, s.y1);
+      ctx.lineTo(s.x2, s.y2);
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = s.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    } else if (s.type === 'fill') {
+      fillAt(s.x, s.y, s.color);
+    }
+  });
+}
+
+function clearCanvas() {
+  ctx.fillStyle = '#fffef9';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function onRemoteClear() { clearCanvas(); }
+
+// ── Flood fill ──
+function fillAt(x, y, fillColor) {
+  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const data = imgData.data;
+  const target = getPixel(data, x, y);
+  const fill = hexToRgb(fillColor);
+  if (!fill) return;
+
+  if (colorMatch(target, fill)) return;
+
+  const stack = [[x,y]];
+  const visited = new Set();
+  const w = canvas.width, h = canvas.height;
+
+  while (stack.length) {
+    const [cx,cy] = stack.pop();
+    const key = cx + ',' + cy;
+    if (visited.has(key)) continue;
+    if (cx < 0 || cx >= w || cy < 0 || cy >= h) continue;
+    const px = getPixel(data, cx, cy);
+    if (!colorMatch(px, target)) continue;
+    visited.add(key);
+    setPixel(data, cx, cy, fill);
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function getPixel(data, x, y) {
+  const i = (y * canvas.width + x) * 4;
+  return [data[i], data[i+1], data[i+2], data[i+3]];
+}
+
+function setPixel(data, x, y, [r,g,b,a=255]) {
+  const i = (y * canvas.width + x) * 4;
+  data[i]=r; data[i+1]=g; data[i+2]=b; data[i+3]=a;
+}
+
+function colorMatch([r1,g1,b1], [r2,g2,b2], tol=30) {
+  return Math.abs(r1-r2) <= tol && Math.abs(g1-g2) <= tol && Math.abs(b1-b2) <= tol;
+}
+
+function hexToRgb(hex) {
+  const m = hex.replace('#','').match(/.{2}/g);
+  return m ? m.map(h => parseInt(h,16)) : null;
+}
+
+// ════════════════════════════════════
+//  TOOLBAR
+// ════════════════════════════════════
+function setupToolbar() {
+  document.querySelectorAll('.color-swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      currentColor = sw.dataset.color;
+      if (currentTool === 'eraser') setTool('pen');
+    });
+  });
+
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSize = parseInt(btn.dataset.size);
+    });
+  });
+
+  document.getElementById('toolPen').addEventListener('click', () => setTool('pen'));
+  document.getElementById('toolEraser').addEventListener('click', () => setTool('eraser'));
+  document.getElementById('toolFill').addEventListener('click', () => setTool('fill'));
+  document.getElementById('toolClear').addEventListener('click', () => {
+    if (!isDrawing) return;
+    clearCanvas();
+    channel.publish('game:clear', {});
+  });
+}
+
+function setTool(tool) {
+  currentTool = tool;
+  document.getElementById('toolPen').classList.toggle('active', tool === 'pen');
+  document.getElementById('toolEraser').classList.toggle('active', tool === 'eraser');
+  document.getElementById('toolFill').classList.toggle('active', tool === 'fill');
+  canvas.style.cursor = tool === 'eraser' ? 'cell' : tool === 'fill' ? 'crosshair' : 'crosshair';
+}
+
+// ════════════════════════════════════
+//  CHAT & GUESSING
+// ════════════════════════════════════
+function setupChat() {
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('sendBtn');
+
+  const send = () => {
+    const text = input.value.trim();
+    if (!text || isDrawing) return;
+    input.value = '';
+    channel.publish('game:guess', {
+      senderId: myId,
+      senderName: myName,
+      text,
+    });
+  };
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  btn.addEventListener('click', send);
+}
+
+function onGuess(msg) {
+  const { senderId, senderName, text } = msg.data;
+  if (!gameActive || !currentWord) return;
+
+  const normalized = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+
+  if (normalized(text) === normalized(currentWord)) {
+    // Correct!
+    if (players[senderId] && !players[senderId].guessed) {
+      players[senderId].guessed = true;
+
+      // Points based on time left
+      const pts = Math.max(100, Math.round(50 + (timerLeft / turnTime) * 450));
+      players[senderId].score += pts;
+
+      // Drawer gets points too
+      if (players[currentDrawerId]) {
+        players[currentDrawerId].score += Math.round(pts * 0.5);
+      }
+
+      addChatMsg({ type:'correct', text: `¡${sanitize(senderName)} lo adivinó! +${pts}pts` });
+      updateScoreList();
+
+      if (senderId === myId) {
+        showToast('¡Correcto! 🎉');
+        launchConfetti();
+      }
+
+      // Check if everyone guessed
+      const nonDrawers = Object.keys(players).filter(id => id !== currentDrawerId);
+      const allGuessed = nonDrawers.every(id => players[id].guessed);
+      if (allGuessed && (isDrawing || isHost)) {
+        setTimeout(() => endTurn(true), 1000);
+      }
+    }
+  } else {
+    // Partial match hint
+    const close = isClose(normalized(text), normalized(currentWord));
+    if (senderId !== myId || isDrawing) {
+      addChatMsg({ type: close ? 'close' : 'chat', name: senderName, text });
+    }
+  }
+}
+
+function isClose(guess, answer) {
+  if (Math.abs(guess.length - answer.length) > 3) return false;
+  let d = 0;
+  const shorter = guess.length < answer.length ? guess : answer;
+  const longer = guess.length >= answer.length ? guess : answer;
+  for (let i = 0; i < longer.length; i++) {
+    if (shorter[i] !== longer[i]) d++;
+  }
+  return d <= 2;
+}
+
+function onChatMsg(msg) {
+  addChatMsg(msg.data);
+}
+
+function addChatMsg(msg) {
+  const el = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + (msg.type || '');
+
+  if (msg.type === 'system') {
+    div.textContent = msg.text;
+  } else if (msg.type === 'correct') {
+    div.textContent = '✅ ' + msg.text;
+  } else if (msg.type === 'close') {
+    div.innerHTML = `<span class="name">${sanitize(msg.name || '')}</span>: <span style="color:var(--warn)">¡Muy cerca!</span>`;
+  } else {
+    div.innerHTML = `<span class="name">${sanitize(msg.name || '')}</span>: ${sanitize(msg.text)}`;
+  }
+
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ════════════════════════════════════
+//  TURN END
+// ════════════════════════════════════
+function endTurn(allGuessed) {
+  clearInterval(timerInterval);
+  if (!isDrawing && !isHost) return; // Only drawer or host ends
+
+  channel.publish('game:turn-end', {
+    word: currentWord,
+    scores: Object.fromEntries(Object.entries(players).map(([id,p]) => [id, p.score])),
+    nextTurnIndex: turnIndex + 1,
+    allGuessed,
+  });
+}
+
+function onTurnEnd(msg) {
+  clearInterval(timerInterval);
+  gameActive = false;
+
+  const { word, scores, nextTurnIndex, allGuessed } = msg.data;
+
+  // Update scores
+  Object.entries(scores).forEach(([id, score]) => {
+    if (players[id]) players[id].score = score;
+  });
+
+  updateScoreList();
+  showRoundEnd(word, scores);
+
+  setTimeout(() => {
+    hideRoundEnd();
+    turnIndex = nextTurnIndex;
+
+    // Check if game over
+    const totalTurns = turnOrder.length * totalRounds;
+    if (turnIndex >= totalTurns) {
+      endGame();
+    } else {
+      // Update round number
+      roundNumber = Math.floor(turnIndex / turnOrder.length) + 1;
+      updateRoundInfo();
+      gameActive = true;
+      clearCanvas();
+      startTurn();
+    }
+  }, 4000);
+}
+
+function showRoundEnd(word, scores) {
+  const el = document.getElementById('roundEnd');
+  document.getElementById('roundEndTitle').textContent = 'La palabra era...';
+  document.getElementById('answerReveal').textContent = word.toUpperCase();
+
+  // Score gains
+  const summary = document.getElementById('scoreSummary');
+  summary.innerHTML = Object.entries(players)
+    .sort((a,b) => b[1].score - a[1].score)
+    .map(([id,p]) => `
+      <div class="score-pill gainer">
+        ${sanitize(p.name)}: ${p.score} pts
+      </div>
+    `).join('');
+
+  el.classList.add('active');
+}
+
+function hideRoundEnd() {
+  document.getElementById('roundEnd').classList.remove('active');
+}
+
+function updateRoundInfo() {
+  document.getElementById('roundInfo').textContent = `RONDA ${roundNumber}/${totalRounds}`;
+}
+
+// ════════════════════════════════════
+//  SCORE LIST
+// ════════════════════════════════════
+function updateScoreList() {
+  const list = document.getElementById('scoreList');
+  const sorted = Object.entries(players).sort((a,b) => b[1].score - a[1].score);
+
+  list.innerHTML = sorted.map(([id,p], i) => `
+    <div class="score-item ${id === currentDrawerId ? 'drawing' : ''} ${p.guessed ? 'guessed' : ''}">
+      <div class="score-rank">#${i+1}</div>
+      <div class="score-name">${sanitize(p.name)}${id === myId ? ' ✦' : ''}</div>
+      <div class="score-icon">${id === currentDrawerId ? '🎨' : p.guessed ? '✅' : ''}</div>
+      <div class="score-pts">${p.score}</div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════
+//  WORD DISPLAY
+// ════════════════════════════════════
+function maskWord(word) {
+  return word.split('').map(c => c === ' ' ? '  ' : '_').join(' ');
+}
+
+// ════════════════════════════════════
+//  GAME END
+// ════════════════════════════════════
+function endGame() {
+  if (isDrawing || isHost) {
+    channel.publish('game:end', {
+      scores: Object.fromEntries(Object.entries(players).map(([id,p]) => [id, p.score])),
+    });
+  }
+}
+
+function onGameEnd(msg) {
+  gameActive = false;
+  clearInterval(timerInterval);
+  const { scores } = msg.data;
+  Object.entries(scores).forEach(([id,score]) => {
+    if (players[id]) players[id].score = score;
+  });
+  showScreen('scoreboard');
+  buildScoreboard();
+}
+
+function buildScoreboard() {
+  const sorted = Object.entries(players).sort((a,b) => b[1].score - a[1].score);
+
+  const podium = document.getElementById('finalPodium');
+  const medals = ['🥇','🥈','🥉'];
+  const heights = ['p1','p2','p3'];
+
+  // Reorder for podium: 2nd, 1st, 3rd
+  const podiumOrder = [sorted[1], sorted[0], sorted[2]].filter(Boolean);
+  const podiumClasses = ['p2','p1','p3'];
+
+  podium.innerHTML = podiumOrder.map((entry, i) => {
+    if (!entry) return '';
+    const [id, p] = entry;
+    const origRank = sorted.findIndex(e => e[0] === id);
+    return `
+      <div class="podium-block">
+        <div class="podium-name">${sanitize(p.name)}</div>
+        <div class="podium-pts">${p.score} pts</div>
+        <div class="podium-bar ${podiumClasses[i]}">${medals[origRank] || ''}</div>
+      </div>
+    `;
+  }).join('');
+
+  const full = document.getElementById('fullRanking');
+  full.innerHTML = sorted.slice(3).map(([id,p],i) =>
+    `${i+4}. ${sanitize(p.name)} — ${p.score} pts`
+  ).join('<br>');
+
+  document.getElementById('btnRestart').addEventListener('click', () => {
+    location.href = location.pathname;
+  });
+
+  if (sorted[0] && sorted[0][0] === myId) {
+    launchConfetti();
+  }
+}
+
+// ════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function sanitize(str) {
+  return String(str).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function pickWords(n) {
+  const pool = [...WORDS];
+  shuffleArray(pool);
+  return pool.slice(0, n);
+}
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i+1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// ── Confetti ──
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const pieces = Array.from({length:120}, () => ({
+    x: Math.random() * canvas.width,
+    y: -20,
+    vx: (Math.random() - 0.5) * 6,
+    vy: Math.random() * 4 + 2,
+    color: ['#e84c1e','#1e7ae8','#1ea854','#e8a81e','#9b59b6','#e91e8c'][Math.floor(Math.random()*6)],
+    size: Math.random() * 8 + 4,
+    rot: Math.random() * 360,
+    rotV: (Math.random() - 0.5) * 8,
+  }));
+
+  let frame;
+  function animate() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.rot += p.rotV;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+      ctx.restore();
+    });
+    if (pieces.some(p => p.y < canvas.height + 50)) {
+      frame = requestAnimationFrame(animate);
+    } else {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+    }
+  }
+
+  frame = requestAnimationFrame(animate);
+  setTimeout(() => { cancelAnimationFrame(frame); ctx.clearRect(0,0,canvas.width,canvas.height); }, 4000);
+}
+</script>
+</body>
+</html>
