@@ -6,7 +6,7 @@
 <title>Pincel — El juego de dibujo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/ably@2/ably.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ably@1.2.50/ably.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1016,21 +1016,24 @@ function joinRoom(code) {
   myId = 'player_' + Math.random().toString(36).slice(2, 10);
 
   try {
-    ably = new Ably.Realtime({ key: ABLY_KEY, clientId: myId });
+    ably = new Ably.Realtime({
+      key: ABLY_KEY,
+      clientId: myId,
+      closeOnUnload: true,
+    });
   } catch(e) {
-    alert('Error conectando. Verifica tu clave Ably en el código.');
+    alert('Error: ' + e.message);
     return;
   }
 
   ably.connection.on('connected', () => {
     channel = ably.channels.get('pincel:' + code);
-
-    channel.presence.enter({ name: myName, score: 0, isHost });
-
+    channel.presence.enter({ name: myName, score: 0, isHost }, function(err) {
+      if (err) console.warn(err);
+    });
     channel.presence.subscribe('enter', onPlayerEnter);
     channel.presence.subscribe('leave', onPlayerLeave);
     channel.presence.subscribe('update', onPlayerUpdate);
-
     channel.subscribe('game:start', onGameStart);
     channel.subscribe('game:word-options', onWordOptions);
     channel.subscribe('game:word-chosen', onWordChosen);
@@ -1042,26 +1045,25 @@ function joinRoom(code) {
     channel.subscribe('game:end', onGameEnd);
     channel.subscribe('game:sync-canvas', onSyncCanvas);
     channel.subscribe('game:request-sync', onRequestSync);
-
-    // Get existing presence
-    channel.presence.get((err, members) => {
-      if (err) return;
-      members.forEach(m => {
-        if (m.clientId !== myId) {
-          players[m.clientId] = { name: m.data.name, score: m.data.score || 0, guessed: false };
-        }
-      });
+    channel.presence.get(function(err, members) {
+      if (members) {
+        members.forEach(function(m) {
+          if (m.clientId !== myId) {
+            players[m.clientId] = { name: m.data.name, score: m.data.score || 0, guessed: false };
+          }
+        });
+      }
       players[myId] = { name: myName, score: 0, guessed: false };
-
       showScreen('waiting');
       setupWaitingRoom();
     });
   });
 
-  ably.connection.on('failed', () => {
-    alert('No se pudo conectar. Verifica tu clave Ably.');
+  ably.connection.on('failed', function(s) {
+    alert('Conexión fallida: ' + (s && s.reason ? s.reason.message : 'Error'));
   });
 }
+
 
 // ════════════════════════════════════
 //  PRESENCE HANDLERS
