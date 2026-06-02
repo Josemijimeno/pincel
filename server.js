@@ -13,68 +13,79 @@ wss.on('connection', (ws, req) => {
   const params = new URL(req.url, 'http://localhost').searchParams;
   const room = params.get('room');
   const id = params.get('id');
+  const name = decodeURIComponent(params.get('name') || 'Jugador');
 
   if (!rooms[room]) rooms[room] = {};
-  rooms[room][id] = ws;
+  rooms[room][id] = { ws, name, id };
+  ws.roomId = room;
+  ws.playerId = id;
+  ws.playerName = name;
 
-  // Enviar a este jugador la lista de jugadores ya conectados
-  const existingPlayers = Object.keys(rooms[room])
-    .filter(pid => pid !== id)
-    .map(pid => rooms[room][pid].playerName || 'Jugador');
+  console.log(`[${room}] + ${name} (${Object.keys(rooms[room]).length} jugadores)`);
 
-  ws.send(JSON.stringify({
-    type: 'room-state',
-    data: { players: Object.entries(rooms[room])
-      .filter(([pid]) => pid !== id)
-      .map(([pid, client]) => ({ id: pid, name: client.playerName || 'Jugador' }))
-    }
-  }));
+  // Enviar al recién llegado la lista de jugadores existentes
+  const existing = Object.entries(rooms[room])
+    .filter(([pid]) => pid !== id)
+    .map(([pid, p]) => ({ id: pid, name: p.name }));
 
-  ws.on('message', (data) => {
-    const msg = data.toString();
-    try {
-      const parsed = JSON.parse(msg);
-      // Guardar nombre del jugador
-      if (parsed.type === 'player-join') {
-        ws.playerName = parsed.fromName;
-        ws.playerId = parsed.from;
-        // Reenviar SOLO a los demás, no al emisor
-        Object.entries(rooms[room]).forEach(([pid, client]) => {
-          if (pid !== id && client.readyState === WebSocket.OPEN) {
-            client.send(msg);
-          }
-        });
-      } else {
-        // Todo lo demás se manda a todos incluido el emisor
-        Object.values(rooms[room]).forEach(client => {
-          if (client.readyState === WebSocket.OPEN) client.send(msg);
-        });
-      }
-    } catch(e) {
-      Object.values(rooms[room]).forEach(client => {
-        if (client.readyState === WebSocket.OPEN) client.send(msg);
-      });
+  safeSend(ws, { type: 'room-state', data: { players: existing } });
+
+  // Avisar a los demás de la llegada
+  broadcastExcept(room, id, {
+    type: 'player-join',
+    from: id,
+    fromName: name,
+    data: { name }
+  });
+
+  ws.on('message', (raw) => {
+    let msg;
+    try { msg = JSON.parse(raw.toString()); } catch(e) { return; }
+
+    if (msg.type === 'player-join') return; // ya lo mandamos arriba
+
+    if (msg.type === 'draw' || msg.type === 'canvas-sync') {
+      // Solo a los demás para no duplicar
+      broadcastExcept(room, id, msg);
+    } else {
+      // Todo lo demás (guess, chat, turn-end, game-start, etc.) a TODOS
+      broadcastAll(room, msg);
     }
   });
 
   ws.on('close', () => {
-    const name = ws.playerName || 'Jugador';
+    if (!rooms[room]) return;
     delete rooms[room][id];
-    if (Object.keys(rooms[room]).length === 0) delete rooms[room];
-    // Notificar a los demás
-    Object.values(rooms[room] || {}).forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'player-leave',
-          from: id,
-          fromName: name,
-          data: {}
-        }));
-      }
-    });
+    console.log(`[${room}] - ${name} (${Object.keys(rooms[room]).length} jugadores)`);
+    if (Object.keys(rooms[room]).length === 0) { delete rooms[room]; return; }
+    broadcastAll(room, { type: 'player-leave', from: id, fromName: name, data: {} });
   });
+
+  ws.on('error', (e) => console.error(`Error ${name}:`, e.message));
 });
 
+function safeSend(ws, obj) {
+  try {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+  } catch(e) {}
+}
+
+function broadcastAll(room, obj) {
+  const str = JSON.stringify(obj);
+  Object.values(rooms[room] || {}).forEach(p => {
+    try { if (p.ws.readyState === WebSocket.OPEN) p.ws.send(str); } catch(e) {}
+  });
+}
+
+function broadcastExcept(room, excludeId, obj) {
+  const str = JSON.stringify(obj);
+  Object.entries(rooms[room] || {}).forEach(([pid, p]) => {
+    if (pid !== excludeId) {
+      try { if (p.ws.readyState === WebSocket.OPEN) p.ws.send(str); } catch(e) {}
+    }
+  });
+}
+
 server.listen(process.env.PORT || 3000, () => {
-  console.log('Servidor Pincel corriendo');
+  console.log('Servidor Pincel OK en puerto', process.env.PORT || 3000);
 });
