@@ -376,6 +376,15 @@ function handleMessage(msg){
     case 'game-end':onGameEnd(msg.data);break;
     case 'canvas-sync':if(msg.data.for===myId)onSyncCanvas(msg.data);break;
     case 'request-sync':if(isDrawing)sendCanvasSync(msg.from);break;
+    case 'room-state':
+  msg.data.players.forEach(p => {
+    if (!players[p.id]) {
+      players[p.id] = { name: p.name, score: 0, guessed: false };
+    }
+  });
+  updatePlayersGrid();
+  updateScoreList();
+  break;
   }
 }
 
