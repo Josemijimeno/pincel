@@ -53,6 +53,8 @@
   .players-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:500px;}
   .player-chip{display:flex;align-items:center;gap:8px;padding:8px 16px;border:2px solid var(--ink);border-radius:100px;font-family:var(--mono);font-size:13px;background:var(--canvas-bg);animation:chipIn .3s cubic-bezier(.34,1.56,.64,1);}
   .player-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--success);}
+  .player-chip.offline .dot{background:#aaa;}
+  .player-chip.offline{opacity:.5;}
   @keyframes chipIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
   #game{flex-direction:column;}
   .game-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:2px solid var(--ink);background:var(--ink);color:var(--paper);flex-shrink:0;gap:12px;}
@@ -123,7 +125,7 @@
   .toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--ink);color:var(--paper);padding:10px 20px;font-family:var(--mono);font-size:13px;opacity:0;pointer-events:none;z-index:200;transition:all .3s;white-space:nowrap;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
   #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:300;}
-  #connectionStatus{position:fixed;bottom:10px;left:10px;font-family:var(--mono);font-size:10px;padding:4px 10px;background:var(--ink);color:var(--paper);border-radius:100px;z-index:400;opacity:.7;}
+  #connectionStatus{position:fixed;bottom:10px;right:10px;font-family:var(--mono);font-size:10px;padding:4px 10px;background:var(--ink);color:var(--paper);border-radius:100px;z-index:400;opacity:.8;}
   ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(15,14,12,.2);}
   @media(max-width:700px){
     .game-body{grid-template-columns:1fr;grid-template-rows:1fr 180px;}
@@ -263,7 +265,7 @@
 
 <div class="toast" id="toast"></div>
 <canvas id="confettiCanvas"></canvas>
-<div id="connectionStatus">Desconectado</div>
+<div id="connectionStatus">🔴 Desconectado</div>
 
 <script>
 const THEMES = {
@@ -282,7 +284,7 @@ const THEMES = {
   naturaleza:{name:'Naturaleza',emoji:'🌿',words:['roble','pino','palmera','bambú','secuoya','cactus','girasol','orquídea','lirio','tulipán','rosa','lavanda','helecho','musgo','liquen','seta','trufa','coral','alga','nenúfar','arcoíris','aurora','eclipse','cometa','niebla','rocío','granizo','tormenta','relámpago','marea','corriente','géiser','manantial','cascada','lago','río','pantano','acantilado','duna','iceberg']},
   videojuegos:{name:'Videojuegos',emoji:'🎮',words:['mando','consola','pixel','boss','nivel','misión','inventario','hechizo','espada','escudo','armadura','dungeon','castillo','aldea','personaje','héroe','villano','dragón','orco','elfo','enano','mago','guerrero','arquero','ladrón','poción','cofre','moneda','experiencia','multijugador','cooperativo','competitivo','torneo','ranking','logro','trofeo','secreto','truco','respawn','lag']},
   mitologia:{name:'Mitología',emoji:'⚡',words:['zeus','poseidón','hades','atenea','apolo','artemisa','ares','afrodita','hermes','hefesto','dioniso','hera','pegaso','minotauro','medusa','centauro','sirena','cíclope','hidra','fénix','grifo','kraken','unicornio','dragón','basilisco','esfinge','quimera','harpía','sátiro','ninfas','titán','olimpo','inframundo','ambrosia','néctar','tridente','rayo','yelmo','caduceo','laberinto']},
-  transporte:{name:'Transporte',emoji:'🚀',words:['avión','barco','tren','bicicleta','moto','camión','submarino','cohete','helicóptero','tranvía','metro','autobús','taxi','ambulancia','grúa','excavadora','tractor','globo aerostático','paracaídas','kayak','canoa','ferry','portaaviones','crucero','velero','catamarán','lancha','yate','trineo','teleférico','funicular','monorraíl','biplano','zepelín','quad','patinete','monopatín','rickshaw','gondola','teleférico']},
+  transporte:{name:'Transporte',emoji:'🚀',words:['avión','barco','tren','bicicleta','moto','camión','submarino','cohete','helicóptero','tranvía','metro','autobús','taxi','ambulancia','grúa','excavadora','tractor','globo aerostático','paracaídas','kayak','canoa','ferry','portaaviones','crucero','velero','catamarán','lancha','yate','trineo','teleférico','funicular','monorraíl','biplano','zepelín','quad','patinete','monopatín','rickshaw','gondola']},
   ropa:{name:'Ropa y moda',emoji:'👗',words:['camiseta','pantalón','vestido','falda','abrigo','chaqueta','jersey','sudadera','bañador','pijama','uniforme','toga','kimono','sari','kilt','turbante','boina','sombrero','gorra','bufanda','guantes','calcetines','botas','sandalias','tacones','zapatillas','cinturón','corbata','pajarita','bolso','mochila','cartera','gafas','pulsera','collar','pendientes','anillo','tiara','reloj','bikini']},
   emociones:{name:'Emociones',emoji:'😊',words:['alegría','tristeza','miedo','sorpresa','asco','ira','amor','odio','envidia','celos','vergüenza','culpa','orgullo','esperanza','desesperación','aburrimiento','curiosidad','nostalgia','melancolía','euforia','ansiedad','calma','confusión','admiración','gratitud','soledad','compasión','empatía','apatía','entusiasmo','frustración','alivio','asombro','ternura','repulsión','indignación','éxtasis','pánico','serenidad','humor']},
   superheroes:{name:'Superhéroes',emoji:'🦸',words:['capa','máscara','traje','poderes','volador','invisibilidad','supervelocidad','telepático','superfuerza','rayos','escudo','bumerán','red','tridente','lasso','arco','flecha','gadget','laboratorio','cuartel','base secreta','sidekick','villano','némesis','kryptonita','suero','mutación','radiación','experimento','accidente','origen','misión','rescate','ciudad','símbolo','señal','equipo','alianza','universo','comic']},
@@ -291,7 +293,8 @@ const THEMES = {
 };
 
 let selectedThemes=new Set(),activeWordPool=[],usedWords=[];
-let ws=null,bc=null,myId='',myName='',roomCode='',isHost=false,isDrawing=false;
+let ws=null,wsReconnectTimer=null;
+let myId='',myName='',roomCode='',isHost=false,isDrawing=false;
 let players={},currentWord='',currentDrawerId='';
 let roundNumber=1,totalRounds=5,turnTime=90;
 let timerInterval=null,timerLeft=0,gameActive=false;
@@ -299,193 +302,93 @@ let turnOrder=[],turnIndex=0;
 let canvas,ctx,drawing=false,lastX=0,lastY=0;
 let currentColor='#0f0e0c',currentSize=3,currentTool='pen';
 let strokeBatch=[],batchTimer=null;
+
 const WS_URL='wss://pincel-production-1a1f.up.railway.app';
 
-function buildThemesGrid(){
-  document.getElementById('themesGrid').innerHTML=Object.entries(THEMES).map(([key,t])=>
-    `<div class="theme-btn" data-key="${key}" onclick="toggleTheme('${key}')"><span class="theme-emoji">${t.emoji}</span>${t.name}</div>`).join('');
-  document.getElementById('customWords').addEventListener('input',updateCustomWordCount);
-}
-
-function toggleTheme(key){
-  selectedThemes.has(key)?selectedThemes.delete(key):selectedThemes.add(key);
-  document.querySelectorAll('.theme-btn').forEach(btn=>btn.classList.toggle('active',selectedThemes.has(btn.dataset.key)));
-  updateSelectedTags();
-}
-
-function updateSelectedTags(){
-  const wrap=document.getElementById('selectedThemes');
-  if(selectedThemes.size===0){wrap.innerHTML='<span style="font-family:var(--mono);font-size:11px;opacity:.4;">Ninguna = todas mezcladas</span>';return;}
-  wrap.innerHTML=[...selectedThemes].map(key=>`<div class="theme-tag">${THEMES[key].emoji} ${THEMES[key].name}<button onclick="toggleTheme('${key}')">×</button></div>`).join('');
-}
-
-function updateCustomWordCount(){
-  const words=parseCustomWords();
-  document.getElementById('customWordCount').textContent=words.length+' palabras';
-}
-
-function parseCustomWords(){
-  return document.getElementById('customWords').value.split(',').map(w=>w.trim().toLowerCase()).filter(w=>w.length>0);
-}
-
-function buildWordPool(){
-  let pool=[];
-  const custom=parseCustomWords();
-  if(custom.length>0)pool=[...custom];
-  if(selectedThemes.size>0){selectedThemes.forEach(key=>pool=pool.concat(THEMES[key].words));}
-  else if(custom.length===0){Object.values(THEMES).forEach(t=>pool=pool.concat(t.words));}
-  return[...new Set(pool)];
-}
-
-let ws = null;
-let wsReconnectTimer = null;
-const WS_URL = 'wss://pincel-production-1a1f.up.railway.app'; // tu URL de Railway
-
-function connectWS() {
-  if (ws && ws.readyState === WebSocket.OPEN) return;
-
-  const params = new URLSearchParams({
-    room: roomCode,
-    id:   myId,
-    name: myName
-  });
-  ws = new WebSocket(`${WS_URL}?${params}`);
-
-  ws.onopen = () => {
-    console.log('WS conectado');
-    clearTimeout(wsReconnectTimer);
-    document.getElementById('connectionStatus').textContent = '🟢 Conectado';
+function connectWS(){
+  if(ws&&ws.readyState===WebSocket.OPEN)return;
+  const params=new URLSearchParams({room:roomCode,id:myId,name:myName});
+  ws=new WebSocket(`${WS_URL}?${params}`);
+  ws.onopen=()=>{
+    clearTimeout(wsReconnectTimer);wsReconnectTimer=null;
+    setStatus('🟢 Conectado','var(--ink)');
+    ws.send(JSON.stringify({type:'player-join',from:myId,fromName:myName,data:{name:myName,isHost}}));
   };
-
-  ws.onclose = () => {
-    document.getElementById('connectionStatus').textContent = '🔴 Reconectando…';
-    // Intentar reconectar cada 3 segundos
-    wsReconnectTimer = setTimeout(connectWS, 3000);
+  ws.onclose=()=>{
+    setStatus('🔴 Reconectando…','#c0392b');
+    if(!wsReconnectTimer)wsReconnectTimer=setTimeout(()=>{wsReconnectTimer=null;connectWS();},3000);
   };
-
-  ws.onerror = () => {
-    ws.close(); // deja que onclose maneje la reconexión
-  };
-
-  ws.onmessage = handleMessage; // tu función de mensajes ya existente
+  ws.onerror=()=>{try{ws.close();}catch(_){}};
+  ws.onmessage=(e)=>{let msg;try{msg=JSON.parse(e.data);}catch(_){return;}handleMessage(msg);};
 }
 
-function useFallback(code){
-  const st=document.getElementById('connectionStatus');
-  st.textContent='● Solo pestañas';st.style.background='var(--warn)';st.style.color='var(--ink)';
-  bc=new BroadcastChannel('pincel:'+code);
-  bc.onmessage=e=>handleMessage(e.data);
- // ── Sala llena ──────────────────────────────────────────────────
-case 'roomFull':
-  alert(`La sala está llena (máximo ${msg.max} jugadores).`);
-  // Volver a la pantalla de inicio
-  document.getElementById('lobby').style.display = 'block';
-  document.getElementById('game').style.display  = 'none';
-  break;
-
-// ── Rejoin exitoso ──────────────────────────────────────────────
-case 'rejoinOk':
-  // Restaurar puntuación
-  myScore = msg.score;
-  updateScoreUI(); // tu función para refrescar la UI de puntos
-  showToast('¡Reconectado! Puntos recuperados: ' + msg.score);
-  // Restaurar lista de jugadores
-  if (msg.players) msg.players.forEach(p => updatePlayerInList(p));
-  break;
-
-// ── Canvas recibido al entrar / reconectar ──────────────────────
-case 'canvasSnapshot':
-  // Reproducir todos los trazos guardados
-  msg.strokes.forEach(stroke => drawStroke(stroke)); // tu función de dibujo
-  break;
-
-// ── Jugador temporalmente caído (puede volver) ─────────────────
-case 'playerDisconnected':
-  showToast(`${msg.name} se ha desconectado…`);
-  markPlayerOffline(msg.id); // opcional: poner su nombre en gris
-  break;
-
-// ── Jugador que vuelve ──────────────────────────────────────────
-case 'playerRejoined':
-  showToast(`${msg.name} ha vuelto 🎉`);
-  markPlayerOnline(msg.id);
-  break;
-
-// ── Jugador que se va definitivamente ──────────────────────────
-case 'playerLeft':
-  showToast(`${msg.name} ha abandonado la partida.`);
-  removePlayerFromList(msg.id);
-  break;
-  onConnected();
+function setStatus(text,bg){
+  const el=document.getElementById('connectionStatus');
+  el.textContent=text;el.style.background=bg||'var(--ink)';
+  el.style.color=bg==='var(--warn)'?'var(--ink)':'var(--paper)';
 }
 
 function sendMsg(type,data){
   const msg={type,data,from:myId,fromName:myName};
-  const str=JSON.stringify(msg);
-  if(ws&&ws.readyState===1){
-    ws.send(str);
-    // draw y canvas-sync el servidor NO nos los devuelve, procesamos local
+  if(ws&&ws.readyState===WebSocket.OPEN){
+    ws.send(JSON.stringify(msg));
     if(type==='draw'||type==='canvas-sync')return;
-    // El servidor SÍ nos devuelve el resto, NO procesamos local para evitar duplicados
-    // EXCEPTO estos tipos que necesitamos procesar local inmediatamente:
     if(type==='word-options'||type==='request-sync')handleMessage(msg);
-  } else if(bc){
-    bc.postMessage(msg);
-    handleMessage(msg);
   }
 }
-function handleMessage(msg) {
-  switch(msg.type) {
+
+function handleMessage(msg){
+  switch(msg.type){
+    case 'roomFull':
+      alert(`La sala está llena (máximo ${msg.max} jugadores).`);
+      showScreen('lobby');break;
+    case 'welcome':
+      if(msg.players){msg.players.forEach(p=>{if(!players[p.id])players[p.id]={name:p.name,score:p.score||0,guessed:false};});updatePlayersGrid();updateScoreList();}break;
+    case 'rejoinOk':
+      if(players[myId])players[myId].score=msg.score||0;
+      showToast('¡Reconectado! Puntos recuperados: '+(msg.score||0));
+      if(msg.players){msg.players.forEach(p=>{if(!players[p.id])players[p.id]={name:p.name,score:p.score||0,guessed:false};else players[p.id].score=p.score||0;});}
+      updatePlayersGrid();updateScoreList();break;
+    case 'canvasSnapshot':
+      if(msg.strokes&&Array.isArray(msg.strokes))msg.strokes.forEach(s=>{if(s.data&&s.data.strokes)onRemoteDraw(s.data);});break;
+    case 'playerDisconnected':
+      showToast((msg.name||'?')+' se desconectó…');markPlayerState(msg.id,false);break;
+    case 'playerRejoined':
+      showToast((msg.name||'?')+' volvió 🎉');markPlayerState(msg.id,true);break;
+    case 'playerLeft':
+      if(players[msg.id||msg.from]){addChat({type:'system',text:(msg.name||players[msg.id||msg.from]?.name||'?')+' abandonó la partida.'});delete players[msg.id||msg.from];updatePlayersGrid();updateScoreList();}break;
     case 'room-state':
-  if(msg.data&&msg.data.players){
-    msg.data.players.forEach(p=>{
-      players[p.id]={name:p.name,score:0,guessed:false};
-    });
-  }
-  updatePlayersGrid();
-  updateScoreList();
-  break;
-case 'player-join':
-  if(msg.from!==myId){
-    players[msg.from]={name:msg.fromName,score:0,guessed:false};
-    updatePlayersGrid();
-    updateScoreList();
-    addChat({type:'system',text:msg.fromName+' se unió.'});
-    if(gameActive&&isDrawing)setTimeout(()=>sendCanvasSync(msg.from),600);
-  }
-  break;);
-      updatePlayersGrid();
-      updateScoreList();
-      break;
+      if(msg.data&&msg.data.players)msg.data.players.forEach(p=>{players[p.id]={name:p.name,score:0,guessed:false};});
+      updatePlayersGrid();updateScoreList();break;
     case 'player-join':
-      if (msg.from !== myId) {
-        players[msg.from] = { name: msg.fromName, score: 0, guessed: false };
-        updatePlayersGrid();
-        updateScoreList();
-        addChat({ type: 'system', text: msg.fromName + ' se unió.' });
-        if (gameActive && isDrawing) setTimeout(() => sendCanvasSync(msg.from), 600);
-      }
-      break;
+      if(msg.from!==myId){players[msg.from]={name:msg.fromName,score:0,guessed:false};updatePlayersGrid();updateScoreList();addChat({type:'system',text:msg.fromName+' se unió.'});if(gameActive&&isDrawing)setTimeout(()=>sendCanvasSync(msg.from),600);}break;
     case 'player-leave':
-      if (players[msg.from]) {
-        addChat({ type: 'system', text: players[msg.from].name + ' se fue.' });
-        delete players[msg.from];
-        updatePlayersGrid();
-        updateScoreList();
-      }
-      break;
-    case 'game-start':    onGameStart(msg.data); break;
-    case 'word-options':  if (msg.data.for === myId) showWordModal(msg.data.words); break;
-    case 'word-chosen':   onWordChosen(msg.data); break;
-    case 'draw':          if (msg.from !== myId) onRemoteDraw(msg.data); break;
-    case 'clear':         if (msg.from !== myId) clearCanvas(); break;
-    case 'guess':         onGuess(msg); break;
-    case 'turn-end':      onTurnEnd(msg.data); break;
-    case 'game-end':      onGameEnd(msg.data); break;
-    case 'canvas-sync':   if (msg.data.for === myId) onSyncCanvas(msg.data); break;
-    case 'request-sync':  if (isDrawing) sendCanvasSync(msg.from); break;
+      if(players[msg.from]){addChat({type:'system',text:players[msg.from].name+' se fue.'});delete players[msg.from];updatePlayersGrid();updateScoreList();}break;
+    case 'game-start':   onGameStart(msg.data);break;
+    case 'word-options': if(msg.data.for===myId)showWordModal(msg.data.words);break;
+    case 'word-chosen':  onWordChosen(msg.data);break;
+    case 'draw':         if(msg.from!==myId)onRemoteDraw(msg.data);break;
+    case 'clear':        if(msg.from!==myId)clearCanvas();break;
+    case 'guess':        onGuess(msg);break;
+    case 'turn-end':     onTurnEnd(msg.data);break;
+    case 'game-end':     onGameEnd(msg.data);break;
+    case 'canvas-sync':  if(msg.data.for===myId)onSyncCanvas(msg.data);break;
+    case 'request-sync': if(isDrawing)sendCanvasSync(msg.from);break;
   }
 }
+
+function markPlayerState(id,online){document.querySelectorAll('.player-chip[data-id="'+id+'"]').forEach(c=>c.classList.toggle('offline',!online));}
+
+function buildThemesGrid(){
+  document.getElementById('themesGrid').innerHTML=Object.entries(THEMES).map(([key,t])=>`<div class="theme-btn" data-key="${key}" onclick="toggleTheme('${key}')"><span class="theme-emoji">${t.emoji}</span>${t.name}</div>`).join('');
+  document.getElementById('customWords').addEventListener('input',updateCustomWordCount);
+}
+function toggleTheme(key){selectedThemes.has(key)?selectedThemes.delete(key):selectedThemes.add(key);document.querySelectorAll('.theme-btn').forEach(btn=>btn.classList.toggle('active',selectedThemes.has(btn.dataset.key)));updateSelectedTags();}
+function updateSelectedTags(){const wrap=document.getElementById('selectedThemes');if(selectedThemes.size===0){wrap.innerHTML='<span style="font-family:var(--mono);font-size:11px;opacity:.4;">Ninguna = todas mezcladas</span>';return;}wrap.innerHTML=[...selectedThemes].map(key=>`<div class="theme-tag">${THEMES[key].emoji} ${THEMES[key].name}<button onclick="toggleTheme('${key}')">×</button></div>`).join('');}
+function updateCustomWordCount(){document.getElementById('customWordCount').textContent=parseCustomWords().length+' palabras';}
+function parseCustomWords(){return document.getElementById('customWords').value.split(',').map(w=>w.trim().toLowerCase()).filter(w=>w.length>0);}
+function buildWordPool(){let pool=[];const custom=parseCustomWords();if(custom.length>0)pool=[...custom];if(selectedThemes.size>0)selectedThemes.forEach(key=>pool=pool.concat(THEMES[key].words));else if(custom.length===0)Object.values(THEMES).forEach(t=>pool=pool.concat(t.words));return[...new Set(pool)];}
+
 window.addEventListener('DOMContentLoaded',()=>{
   buildThemesGrid();updateSelectedTags();setupLobbyUI();
   canvas=document.getElementById('drawCanvas');ctx=canvas.getContext('2d');
@@ -495,26 +398,14 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 function setupLobbyUI(){
-  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
-    document.getElementById('tab-create').style.display=t.dataset.tab==='create'?'block':'none';
-    document.getElementById('tab-join').style.display=t.dataset.tab==='join'?'block':'none';
-  }));
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-create').style.display=t.dataset.tab==='create'?'block':'none';document.getElementById('tab-join').style.display=t.dataset.tab==='join'?'block':'none';}));
   document.getElementById('btnCreate').addEventListener('click',handleCreate);
   document.getElementById('btnJoin').addEventListener('click',handleJoin);
   document.getElementById('createName').addEventListener('keydown',e=>{if(e.key==='Enter')handleCreate();});
   document.getElementById('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')handleJoin();});
   document.getElementById('joinCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
 }
- 
-function sendStroke(x0, y0, x1, y1, color, size) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({
-    type:  'draw',      // <-- importante, debe ser "draw"
-    x0, y0, x1, y1,
-    color, size
-  }));
-}
+
 function handleCreate(){
   const name=document.getElementById('createName').value.trim();
   if(!name){showError('createError','Necesitas un nombre');return;}
@@ -523,7 +414,8 @@ function handleCreate(){
   activeWordPool=buildWordPool();
   if(activeWordPool.length<5){showError('createError','Añade al menos 5 palabras');return;}
   myName=name;isHost=true;myId='p_'+Math.random().toString(36).slice(2,9);
-  roomCode=genCode();connectWS(roomCode,myName,true);
+  roomCode=genCode();players[myId]={name:myName,score:0,guessed:false};
+  connectWS();showScreen('waiting');setupWaitingRoom();
 }
 
 function handleJoin(){
@@ -532,22 +424,12 @@ function handleJoin(){
   if(!name){showError('joinError','Necesitas un nombre');return;}
   if(code.length!==4){showError('joinError','Código de 4 caracteres');return;}
   myName=name;isHost=false;myId='p_'+Math.random().toString(36).slice(2,9);
-  roomCode=code;connectWS(code,myName,false);
+  roomCode=code;players[myId]={name:myName,score:0,guessed:false};
+  connectWS();showScreen('waiting');setupWaitingRoom();
 }
 
 function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');}
 function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.parentElement.classList.add('shake');setTimeout(()=>el.parentElement.classList.remove('shake'),300);setTimeout(()=>el.textContent='',3000);}
-
-function onConnected(){
-  players[myId]={name:myName,score:0,guessed:false};
-  // Anunciarnos al resto (el servidor lo manda a todos menos a nosotros)
-  const msg={type:'player-join',from:myId,fromName:myName,data:{name:myName,isHost}};
-  if(ws&&ws.readyState===1)ws.send(JSON.stringify(msg));
-  else if(bc)bc.postMessage(msg);
-  showScreen('waiting');
-  setupWaitingRoom();
-  updatePlayersGrid();
-}
 
 function setupWaitingRoom(){
   document.getElementById('displayCode').textContent=roomCode;
@@ -555,18 +437,11 @@ function setupWaitingRoom(){
   document.getElementById('guestWait').style.display=isHost?'none':'block';
   history.replaceState(null,'',location.pathname+'?room='+roomCode);
   document.getElementById('btnStart').onclick=startGame;
-  if(isHost){
-    const names=[...selectedThemes].map(k=>THEMES[k].emoji+' '+THEMES[k].name);
-    document.getElementById('activeThemesBadge').textContent=names.length>0?'Temáticas: '+names.join(', '):'🎲 Todas las temáticas · '+activeWordPool.length+' palabras';
-  }
+  if(isHost){const names=[...selectedThemes].map(k=>THEMES[k].emoji+' '+THEMES[k].name);document.getElementById('activeThemesBadge').textContent=names.length>0?'Temáticas: '+names.join(', '):'🎲 Todas las temáticas · '+activeWordPool.length+' palabras';}
   updatePlayersGrid();
 }
 
-function updatePlayersGrid(){
-  document.getElementById('playersGrid').innerHTML=Object.entries(players).map(([id,p])=>
-    `<div class="player-chip"><div class="dot"></div>${san(p.name)}${id===myId?' (tú)':''}</div>`).join('');
-}
-
+function updatePlayersGrid(){document.getElementById('playersGrid').innerHTML=Object.entries(players).map(([id,p])=>`<div class="player-chip" data-id="${id}"><div class="dot"></div>${san(p.name)}${id===myId?' (tú)':''}</div>`).join('');}
 function copyCode(){navigator.clipboard.writeText(roomCode).then(()=>showToast('¡Código copiado!'));}
 
 function startGame(){
@@ -581,8 +456,7 @@ function onGameStart(data){
   turnOrder=data.turnOrder;totalRounds=data.totalRounds;turnTime=data.turnTime;
   roundNumber=data.roundNumber;turnIndex=0;
   if(data.wordPool)activeWordPool=data.wordPool;
-  usedWords=[];
-  Object.keys(players).forEach(id=>{players[id].score=0;players[id].guessed=false;});
+  usedWords=[];Object.keys(players).forEach(id=>{players[id].score=0;players[id].guessed=false;});
   gameActive=true;showScreen('game');resizeCanvas();updateScoreList();updateRoundInfo();startTurn();
 }
 
@@ -595,16 +469,8 @@ function startTurn(){
   document.getElementById('chatInput').placeholder=isDrawing?'Estás dibujando...':'Escribe tu respuesta...';
   canvas.style.cursor=isDrawing?'crosshair':'default';
   updateScoreList();
-  if(isDrawing){
-    document.getElementById('drawerNotice').style.display='none';
-    sendMsg('word-options',{for:myId,words:pickWords(3)});
-  }else{
-    const dn=players[currentDrawerId]?.name||'Alguien';
-    document.getElementById('drawerNotice').style.display='block';
-    document.getElementById('drawerNoticeName').textContent=dn+' está dibujando...';
-    addChat({type:'system',text:dn+' está dibujando.'});
-    sendMsg('request-sync',{from:myId});
-  }
+  if(isDrawing){document.getElementById('drawerNotice').style.display='none';sendMsg('word-options',{for:myId,words:pickWords(3)});}
+  else{const dn=players[currentDrawerId]?.name||'Alguien';document.getElementById('drawerNotice').style.display='block';document.getElementById('drawerNoticeName').textContent=dn+' está dibujando...';addChat({type:'system',text:dn+' está dibujando.'});sendMsg('request-sync',{from:myId});}
 }
 
 function showWordModal(words){
@@ -614,38 +480,19 @@ function showWordModal(words){
   document.querySelectorAll('.word-choice').forEach(el=>el.addEventListener('click',()=>{modal.classList.remove('active');chooseWord(el.dataset.word);}));
 }
 
-function chooseWord(word){
-  currentWord=word;usedWords.push(word);
-  document.getElementById('wordDisplay').textContent=word;
-  sendMsg('word-chosen',{drawerId:myId,masked:maskWord(word),turnTime});
-  startTimer(turnTime);
-}
-
-function onWordChosen(data){
-  if(data.drawerId===myId)return;
-  currentWord='';
-  document.getElementById('drawerNotice').style.display='none';
-  document.getElementById('wordDisplay').textContent=data.masked;
-  startTimer(data.turnTime);
-}
-
+function chooseWord(word){currentWord=word;usedWords.push(word);document.getElementById('wordDisplay').textContent=word;sendMsg('word-chosen',{drawerId:myId,masked:maskWord(word),turnTime});startTimer(turnTime);}
+function onWordChosen(data){if(data.drawerId===myId)return;currentWord='';document.getElementById('drawerNotice').style.display='none';document.getElementById('wordDisplay').textContent=data.masked;startTimer(data.turnTime);}
 function sendCanvasSync(forId){sendMsg('canvas-sync',{for:forId,dataUrl:canvas.toDataURL('image/png')});}
 function onSyncCanvas(data){if(isDrawing)return;const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=data.dataUrl;}
 
-function startTimer(secs){
-  clearInterval(timerInterval);timerLeft=secs;updateTimerEl();
-  timerInterval=setInterval(()=>{timerLeft--;updateTimerEl();if(timerLeft<=0){clearInterval(timerInterval);if(isDrawing)endTurn();}},1000);
-}
+function startTimer(secs){clearInterval(timerInterval);timerLeft=secs;updateTimerEl();timerInterval=setInterval(()=>{timerLeft--;updateTimerEl();if(timerLeft<=0){clearInterval(timerInterval);if(isDrawing)endTurn();}},1000);}
 function updateTimerEl(){const el=document.getElementById('timerDisplay');el.textContent=timerLeft;el.classList.toggle('urgent',timerLeft<=10);}
 
 function setupCanvas(){
   resizeCanvas();window.addEventListener('resize',resizeCanvas);
-  canvas.addEventListener('pointerdown',startDraw);
-  canvas.addEventListener('pointermove',doDraw);
-  canvas.addEventListener('pointerup',stopDraw);
-  canvas.addEventListener('pointerleave',stopDraw);
+  canvas.addEventListener('pointerdown',startDraw);canvas.addEventListener('pointermove',doDraw);
+  canvas.addEventListener('pointerup',stopDraw);canvas.addEventListener('pointerleave',stopDraw);
 }
-
 function resizeCanvas(){
   const wrap=document.getElementById('canvasWrap');
   const tbH=document.getElementById('toolbar').offsetHeight||50;
@@ -655,19 +502,10 @@ function resizeCanvas(){
   ctx.fillStyle='#fffef9';ctx.fillRect(0,0,w,h);
   if(img)ctx.putImageData(img,0,0);
 }
-
 function getPos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
-
-function startDraw(e){
-  if(!isDrawing)return;e.preventDefault();drawing=true;
-  const p=getPos(e);lastX=p.x;lastY=p.y;
-  ctx.beginPath();ctx.arc(p.x,p.y,(currentTool==='eraser'?currentSize*2:currentSize)/2,0,Math.PI*2);
-  ctx.fillStyle=currentTool==='eraser'?'#fffef9':currentColor;ctx.fill();
-}
-
+function startDraw(e){if(!isDrawing)return;e.preventDefault();drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;ctx.beginPath();ctx.arc(p.x,p.y,(currentTool==='eraser'?currentSize*2:currentSize)/2,0,Math.PI*2);ctx.fillStyle=currentTool==='eraser'?'#fffef9':currentColor;ctx.fill();}
 function doDraw(e){
-  if(!drawing||!isDrawing)return;e.preventDefault();
-  const p=getPos(e);
+  if(!drawing||!isDrawing)return;e.preventDefault();const p=getPos(e);
   const color=currentTool==='eraser'?'#fffef9':currentColor;
   const size=currentTool==='eraser'?currentSize*2:currentSize;
   ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);
@@ -676,73 +514,35 @@ function doDraw(e){
   lastX=p.x;lastY=p.y;
   if(!batchTimer)batchTimer=setTimeout(flushBatch,30);
 }
-
 function stopDraw(){if(!drawing)return;drawing=false;flushBatch();}
-
-function flushBatch(){
-  if(!strokeBatch.length)return;
-  const s=[...strokeBatch];strokeBatch=[];batchTimer=null;
-  const msg={type:'draw',from:myId,data:{strokes:s}};
-  if(ws&&ws.readyState===1)ws.send(JSON.stringify(msg));else if(bc)bc.postMessage(msg);
-}
-
-function onRemoteDraw(data){
-  data.strokes.forEach(s=>{
-    ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);
-    ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
-  });
-}
-
+function flushBatch(){if(!strokeBatch.length)return;const s=[...strokeBatch];strokeBatch=[];batchTimer=null;const msg={type:'draw',from:myId,data:{strokes:s}};if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));}
+function onRemoteDraw(data){data.strokes.forEach(s=>{ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();});}
 function clearCanvas(){ctx.fillStyle='#fffef9';ctx.fillRect(0,0,canvas.width,canvas.height);}
 
 function setupToolbar(){
-  document.querySelectorAll('.color-swatch').forEach(sw=>sw.addEventListener('click',()=>{
-    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
-    sw.classList.add('active');currentColor=sw.dataset.color;
-    if(currentTool==='eraser')setTool('pen');
-  }));
-  document.querySelectorAll('.size-btn').forEach(btn=>btn.addEventListener('click',()=>{
-    document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');currentSize=parseInt(btn.dataset.size);
-  }));
+  document.querySelectorAll('.color-swatch').forEach(sw=>sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');currentColor=sw.dataset.color;if(currentTool==='eraser')setTool('pen');}));
+  document.querySelectorAll('.size-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentSize=parseInt(btn.dataset.size);}));
   document.getElementById('toolPen').addEventListener('click',()=>setTool('pen'));
   document.getElementById('toolEraser').addEventListener('click',()=>setTool('eraser'));
-  document.getElementById('toolClear').addEventListener('click',()=>{
-    if(!isDrawing)return;clearCanvas();
-    const msg={type:'clear',from:myId,data:{}};
-    if(ws&&ws.readyState===1)ws.send(JSON.stringify(msg));else if(bc)bc.postMessage(msg);
-  });
+  document.getElementById('toolClear').addEventListener('click',()=>{if(!isDrawing)return;clearCanvas();const msg={type:'clear',from:myId,data:{}};if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));});
 }
-
 function setTool(t){currentTool=t;document.getElementById('toolPen').classList.toggle('active',t==='pen');document.getElementById('toolEraser').classList.toggle('active',t==='eraser');}
- 
+
 function setupChat(){
   const input=document.getElementById('chatInput');
   const send=()=>{
-    const text=input.value.trim();
-    if(!text||isDrawing)return;
-    input.value='';
+    const text=input.value.trim();if(!text||isDrawing)return;input.value='';
     const msg={type:'guess',data:{senderId:myId,senderName:myName,text},from:myId,fromName:myName};
-    const str=JSON.stringify(msg);
-    // Mostrar el mío inmediatamente
     addChat({type:'chat',name:myName,text});
-    // Enviar al servidor (él lo manda a todos incluido yo, pero lo ignoramos al recibirlo)
-    if(ws&&ws.readyState===1)ws.send(str);
-    else if(bc)bc.postMessage(msg);
-    // Procesar la lógica de adivinanza localmente
+    if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));
     procesarAdivinanza(myId,myName,text);
   };
   input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
   document.getElementById('sendBtn').addEventListener('click',send);
 }
-function onGuess(msg){
-  if(!gameActive)return;
-  const{senderId,senderName,text}=msg.data;
-  // Ignorar el mío porque ya lo mostramos al enviar
-  if(senderId===myId)return;
-  addChat({type:'chat',name:senderName,text});
-  procesarAdivinanza(senderId,senderName,text);
-}
+
+function onGuess(msg){if(!gameActive)return;const{senderId,senderName,text}=msg.data;if(senderId===myId)return;addChat({type:'chat',name:senderName,text});procesarAdivinanza(senderId,senderName,text);}
+
 function procesarAdivinanza(senderId,senderName,text){
   if(!currentWord||!gameActive)return;
   const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
@@ -758,7 +558,7 @@ function procesarAdivinanza(senderId,senderName,text){
       const nonDrawers=Object.keys(players).filter(id=>id!==currentDrawerId);
       if(nonDrawers.every(id=>players[id].guessed)&&isDrawing)setTimeout(()=>endTurn(),1000);
     }
-  } else if(currentWord){
+  }else if(currentWord){
     const close=isClose(norm(text),norm(currentWord));
     if(close&&senderId===myId)addChat({type:'close',name:senderName,text:'¡Muy cerca!'});
   }
@@ -775,10 +575,7 @@ function addChat(msg){
   el.appendChild(div);el.scrollTop=el.scrollHeight;
 }
 
-function endTurn(){
-  clearInterval(timerInterval);
-  sendMsg('turn-end',{word:currentWord,scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,p.score])),nextTurnIndex:turnIndex+1});
-}
+function endTurn(){clearInterval(timerInterval);sendMsg('turn-end',{word:currentWord,scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,p.score])),nextTurnIndex:turnIndex+1});}
 
 function onTurnEnd(data){
   clearInterval(timerInterval);gameActive=false;
@@ -791,7 +588,7 @@ function onTurnEnd(data){
   setTimeout(()=>{
     document.getElementById('roundEnd').classList.remove('active');
     turnIndex=data.nextTurnIndex;
-    if(turnIndex>=turnOrder.length*totalRounds){endGame();}
+    if(turnIndex>=turnOrder.length*totalRounds)endGame();
     else{roundNumber=Math.floor(turnIndex/turnOrder.length)+1;updateRoundInfo();gameActive=true;clearCanvas();startTurn();}
   },4000);
 }
@@ -831,17 +628,11 @@ function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classL
 function showToast(msg,ms=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
 function san(s){return String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function maskWord(w){return w.split('').map(c=>c===' '?'  ':'_').join(' ');}
-function pickWords(n){
-  const pool=activeWordPool.length>0?activeWordPool:Object.values(THEMES).flatMap(t=>t.words);
-  const available=pool.filter(w=>!usedWords.includes(w));
-  const source=available.length>=n?available:pool;
-  const copy=[...source];shuffle(copy);return copy.slice(0,n);
-}
+function pickWords(n){const pool=activeWordPool.length>0?activeWordPool:Object.values(THEMES).flatMap(t=>t.words);const available=pool.filter(w=>!usedWords.includes(w));const source=available.length>=n?available:pool;const copy=[...source];shuffle(copy);return copy.slice(0,n);}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
 
 function launchConfetti(){
-  const c=document.getElementById('confettiCanvas');
-  c.width=window.innerWidth;c.height=window.innerHeight;
+  const c=document.getElementById('confettiCanvas');c.width=window.innerWidth;c.height=window.innerHeight;
   const x=c.getContext('2d');
   const ps=Array.from({length:120},()=>({x:Math.random()*c.width,y:-20,vx:(Math.random()-.5)*6,vy:Math.random()*4+2,color:['#e84c1e','#1e7ae8','#1ea854','#e8a81e','#9b59b6','#e91e8c'][Math.floor(Math.random()*6)],size:Math.random()*8+4,rot:Math.random()*360,rotV:(Math.random()-.5)*8}));
   let frame;
@@ -851,8 +642,7 @@ function launchConfetti(){
 }
 
 window.addEventListener('beforeunload',()=>{
-  if(ws)ws.close();
-  if(bc){bc.postMessage({type:'player-leave',from:myId,fromName:myName,data:{}});bc.close();}
+  if(ws){try{ws.send(JSON.stringify({type:'player-leave',from:myId,fromName:myName,data:{}}));ws.close();}catch(_){}}
 });
 </script>
 </body>
