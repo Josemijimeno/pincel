@@ -70,7 +70,6 @@
   .theme-btn:hover{background:var(--cream);}
   .theme-btn.active{background:var(--ink);color:var(--paper);}
   .theme-btn .theme-emoji{display:block;font-size:18px;margin-bottom:3px;}
-  .custom-words-wrap textarea{height:80px;resize:vertical;font-size:13px;}
   .word-count-badge{font-family:var(--mono);font-size:11px;opacity:.5;margin-top:5px;}
   .selected-themes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:28px;}
   .theme-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:11px;border-radius:100px;}
@@ -154,27 +153,28 @@
   #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:300;}
   #connectionStatus{position:fixed;bottom:10px;right:10px;font-family:var(--mono);font-size:10px;padding:4px 10px;background:var(--ink);color:var(--paper);border-radius:100px;z-index:400;opacity:.8;}
   #avatar{flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:24px 0;}
-.avatar-wrap{display:flex;gap:32px;width:min(860px,96vw);background:var(--canvas-bg);border:2px solid var(--ink);padding:32px;box-shadow:6px 6px 0 var(--ink);}
-.avatar-left{display:flex;flex-direction:column;align-items:center;gap:16px;flex-shrink:0;}
-.avatar-title{font-family:var(--mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:.5;}
-#avatarPreview{border:2px solid var(--ink);background:var(--paper);box-shadow:4px 4px 0 var(--ink);}
-.avatar-right{flex:1;display:flex;flex-direction:column;gap:12px;overflow-y:auto;max-height:500px;}
-.avatar-section{display:flex;flex-direction:column;gap:7px;}
-.avatar-section-title{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.6;}
-.avatar-options{display:flex;flex-wrap:wrap;gap:7px;}
-.av-opt{width:36px;height:36px;border:2px solid var(--ink);background:var(--paper);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,border-color .1s;}
-.av-opt:hover{transform:scale(1.1);}
-.av-opt.active{border-color:var(--accent);box-shadow:3px 3px 0 var(--accent);}
-.skin-opt{border-radius:50%;}
-.av-opt.active.skin-opt{box-shadow:0 0 0 3px var(--accent);}
-.score-item{display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid rgba(15,14,12,.1);font-size:13px;}
-.mini-avatar{flex-shrink:0;}
-@media(max-width:700px){.avatar-wrap{flex-direction:column;}.avatar-left{width:100%;}.avatar-right{max-height:none;}}
+  .avatar-wrap{display:flex;gap:32px;width:min(860px,96vw);background:var(--canvas-bg);border:2px solid var(--ink);padding:32px;box-shadow:6px 6px 0 var(--ink);}
+  .avatar-left{display:flex;flex-direction:column;align-items:center;gap:16px;flex-shrink:0;}
+  .avatar-title{font-family:var(--mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:.5;}
+  #avatarPreview{border:2px solid var(--ink);background:var(--paper);box-shadow:4px 4px 0 var(--ink);}
+  .avatar-right{flex:1;display:flex;flex-direction:column;gap:12px;overflow-y:auto;max-height:500px;}
+  .avatar-section{display:flex;flex-direction:column;gap:7px;}
+  .avatar-section-title{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.6;}
+  .avatar-options{display:flex;flex-wrap:wrap;gap:7px;}
+  .av-opt{width:36px;height:36px;border:2px solid var(--ink);background:var(--paper);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,border-color .1s;}
+  .av-opt:hover{transform:scale(1.1);}
+  .av-opt.active{border-color:var(--accent);box-shadow:3px 3px 0 var(--accent);}
+  .skin-opt{border-radius:50%;}
+  .av-opt.active.skin-opt{box-shadow:0 0 0 3px var(--accent);}
+  .mini-avatar{flex-shrink:0;}
   ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(15,14,12,.2);}
   @media(max-width:700px){
     .game-body{grid-template-columns:1fr;grid-template-rows:1fr 180px;}
     .sidebar-left{display:none;}
     .sidebar-right{border-left:none;border-top:2px solid var(--ink);}
+    .avatar-wrap{flex-direction:column;}
+    .avatar-left{width:100%;}
+    .avatar-right{max-height:none;}
   }
 </style>
 </head>
@@ -217,6 +217,7 @@
     </div>
   </div>
 </div>
+
 <div id="avatar" class="screen">
   <div class="avatar-wrap">
     <div class="avatar-left">
@@ -258,7 +259,7 @@
           <div class="av-opt" data-cat="mouth" data-val="serious">😐</div>
           <div class="av-opt" data-cat="mouth" data-val="tongue">😛</div>
           <div class="av-opt" data-cat="mouth" data-val="mustache">🧔</div>
-          <div class="av-opt" data-cat="mouth" data-val="beard">🧔‍♂️</div>
+          <div class="av-opt" data-cat="mouth" data-val="beard">🧔</div>
         </div>
       </div>
       <div class="avatar-section">
@@ -293,7 +294,26 @@
           <div class="av-opt skin-opt active" data-cat="shirt" data-val="e84c1e" style="background:#e84c1e"></div>
           <div class="av-opt skin-opt" data-cat="shirt" data-val="1e7ae8" style="background:#1e7ae8"></div>
           <div class="av-opt skin-opt" data-cat="shirt" data-val="1ea854" style="background:#1ea854"></div>
-          <div
+          <div class="av-opt skin-opt" data-cat="shirt" data-val="9b59b6" style="background:#9b59b6"></div>
+          <div class="av-opt skin-opt" data-cat="shirt" data-val="e8a81e" style="background:#e8a81e"></div>
+          <div class="av-opt skin-opt" data-cat="shirt" data-val="0f0e0c" style="background:#0f0e0c"></div>
+        </div>
+      </div>
+      <div class="avatar-section">
+        <div class="avatar-section-title">🎩 Sombrero</div>
+        <div class="avatar-options" id="opt-hat">
+          <div class="av-opt active" data-cat="hat" data-val="none">✕</div>
+          <div class="av-opt" data-cat="hat" data-val="cap">🧢</div>
+          <div class="av-opt" data-cat="hat" data-val="top">🎩</div>
+          <div class="av-opt" data-cat="hat" data-val="crown">👑</div>
+          <div class="av-opt" data-cat="hat" data-val="chef">👨‍🍳</div>
+          <div class="av-opt" data-cat="hat" data-val="beret">🎭</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnAvatarDone" style="margin-top:16px;">¡Listo! →</button>
+    </div>
+  </div>
+</div>
 
 <div id="waiting" class="screen">
   <div style="text-align:center">
@@ -387,208 +407,116 @@
 <div class="toast" id="toast"></div>
 <canvas id="confettiCanvas"></canvas>
 <div id="connectionStatus">🔴 Desconectado</div>
-// ── Avatar config por defecto ─────────────────────────────────
+
+<script>
+// ── Avatar config ─────────────────────────────────────────────
 const DEFAULT_AVATAR={skin:'fde3c0',eyes:'round',mouth:'smile',hair:'short',hairColor:'1a1a1a',shirt:'e84c1e',hat:'none'};
 let myAvatar=JSON.parse(localStorage.getItem('pincelAvatar')||JSON.stringify(DEFAULT_AVATAR));
 
-// ── Dibujar muñeco ────────────────────────────────────────────
 function drawAvatar(ctx,av,x,y,scale){
   scale=scale||1;
-  const s=scale;
-  const sk='#'+av.skin;
-  const sh='#'+av.shirt;
-  const hc='#'+av.hairColor;
-
-  // Cuerpo
-  ctx.fillStyle=sh;
-  ctx.beginPath();
-  ctx.roundRect(x+20*s,y+160*s,80*s,90*s,12*s);
-  ctx.fill();
+  const s=scale,sk='#'+av.skin,sh='#'+av.shirt,hc='#'+av.hairColor;
+  ctx.fillStyle=sh;ctx.beginPath();ctx.roundRect(x+20*s,y+160*s,80*s,90*s,12*s);ctx.fill();
   ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;ctx.stroke();
-
-  // Cuello
-  ctx.fillStyle=sk;
-  ctx.fillRect(x+45*s,y+145*s,30*s,25*s);
-
-  // Cabeza
-  ctx.fillStyle=sk;
-  ctx.beginPath();
-  ctx.ellipse(x+60*s,y+110*s,45*s,50*s,0,0,Math.PI*2);
-  ctx.fill();
+  ctx.fillStyle=sk;ctx.fillRect(x+45*s,y+145*s,30*s,25*s);
+  ctx.fillStyle=sk;ctx.beginPath();ctx.ellipse(x+60*s,y+110*s,45*s,50*s,0,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;ctx.stroke();
-
-  // Orejas
   ctx.fillStyle=sk;
   ctx.beginPath();ctx.ellipse(x+15*s,y+110*s,10*s,13*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
   ctx.beginPath();ctx.ellipse(x+105*s,y+110*s,10*s,13*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-
-  // Pelo
-  ctx.fillStyle=hc;
-  ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
-  if(av.hair==='short'){
-    ctx.beginPath();ctx.ellipse(x+60*s,y+75*s,46*s,30*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();
-  }else if(av.hair==='long'){
-    ctx.beginPath();ctx.ellipse(x+60*s,y+75*s,46*s,30*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillRect(x+14*s,y+80*s,16*s,70*s);
-    ctx.fillRect(x+90*s,y+80*s,16*s,70*s);
-  }else if(av.hair==='curly'){
-    for(let i=0;i<6;i++){const cx2=x+(20+i*16)*s;ctx.beginPath();ctx.arc(cx2,y+68*s,14*s,0,Math.PI*2);ctx.fill();ctx.stroke();}
-  }else if(av.hair==='mohawk'){
-    ctx.beginPath();ctx.moveTo(x+60*s,y+30*s);ctx.lineTo(x+45*s,y+75*s);ctx.lineTo(x+75*s,y+75*s);ctx.closePath();ctx.fill();ctx.stroke();
-  }else if(av.hair==='ponytail'){
-    ctx.beginPath();ctx.ellipse(x+60*s,y+75*s,46*s,30*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.moveTo(x+100*s,y+90*s);ctx.quadraticCurveTo(x+130*s,y+100*s,x+120*s,y+140*s);ctx.lineWidth=10*s;ctx.strokeStyle=hc;ctx.stroke();ctx.lineWidth=2*s;ctx.strokeStyle='#0f0e0c';
-  }else if(av.hair==='afro'){
-    ctx.beginPath();ctx.arc(x+60*s,y+80*s,55*s,0,Math.PI*2);ctx.fill();ctx.stroke();
-  }else if(av.hair==='beanie'){
-    ctx.fillStyle=hc;
-    ctx.beginPath();ctx.ellipse(x+60*s,y+72*s,46*s,28*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillRect(x+14*s,y+70*s,92*s,14*s);ctx.stroke();
-  }
-  // bald = sin pelo
-
-  // Cejas
+  ctx.fillStyle=hc;ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
+  if(av.hair==='short'){ctx.beginPath();ctx.ellipse(x+60*s,y+75*s,46*s,30*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();}
+  else if(av.hair==='long'){ctx.beginPath();ctx.ellipse(x+60*s,y+75*s,46*s,30*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillRect(x+14*s,y+80*s,16*s,70*s);ctx.fillRect(x+90*s,y+80*s,16*s,70*s);}
+  else if(av.hair==='curly'){for(let i=0;i<6;i++){ctx.beginPath();ctx.arc(x+(20+i*16)*s,y+68*s,14*s,0,Math.PI*2);ctx.fill();ctx.stroke();}}
+  else if(av.hair==='mohawk'){ctx.beginPath();ctx.moveTo(x+60*s,y+30*s);ctx.lineTo(x+45*s,y+75*s);ctx.lineTo(x+75*s,y+75*s);ctx.closePath();ctx.fill();ctx.stroke();}
+  else if(av.hair==='ponytail'){ctx.beginPath();ctx.ellipse(x+60*s,y+75*s,46*s,30*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(x+100*s,y+90*s);ctx.quadraticCurveTo(x+130*s,y+100*s,x+120*s,y+140*s);ctx.lineWidth=10*s;ctx.strokeStyle=hc;ctx.stroke();ctx.lineWidth=2*s;ctx.strokeStyle='#0f0e0c';}
+  else if(av.hair==='afro'){ctx.beginPath();ctx.arc(x+60*s,y+80*s,55*s,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  else if(av.hair==='beanie'){ctx.beginPath();ctx.ellipse(x+60*s,y+72*s,46*s,28*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillRect(x+14*s,y+70*s,92*s,14*s);ctx.stroke();}
   ctx.strokeStyle='#0f0e0c';ctx.lineWidth=3*s;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(x+32*s,y+88*s);ctx.lineTo(x+48*s,y+85*s);ctx.stroke();
   ctx.beginPath();ctx.moveTo(x+72*s,y+85*s);ctx.lineTo(x+88*s,y+88*s);ctx.stroke();
-
-  // Ojos
   if(av.eyes==='round'||av.eyes==='almond'){
     ctx.fillStyle='#fff';
     ctx.beginPath();ctx.ellipse(x+40*s,y+102*s,10*s,av.eyes==='almond'?7*s:10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.beginPath();ctx.ellipse(x+80*s,y+102*s,10*s,av.eyes==='almond'?7*s:10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillStyle='#1a1a1a';
-    ctx.beginPath();ctx.arc(x+40*s,y+102*s,5*s,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(x+40*s,y+102*s,5*s,0,Math.PI*2);ctx.fill();
     ctx.beginPath();ctx.arc(x+80*s,y+102*s,5*s,0,Math.PI*2);ctx.fill();
   }else if(av.eyes==='glasses'){
     ctx.fillStyle='#fff';
     ctx.beginPath();ctx.ellipse(x+40*s,y+102*s,12*s,9*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.beginPath();ctx.ellipse(x+80*s,y+102*s,12*s,9*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.beginPath();ctx.moveTo(x+52*s,y+102*s);ctx.lineTo(x+68*s,y+102*s);ctx.stroke();
-    ctx.fillStyle='#1a1a1a';
-    ctx.beginPath();ctx.arc(x+40*s,y+102*s,4*s,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(x+40*s,y+102*s,4*s,0,Math.PI*2);ctx.fill();
     ctx.beginPath();ctx.arc(x+80*s,y+102*s,4*s,0,Math.PI*2);ctx.fill();
   }else if(av.eyes==='wink'){
-    ctx.fillStyle='#fff';
-    ctx.beginPath();ctx.ellipse(x+40*s,y+102*s,10*s,10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(x+40*s,y+102*s,10*s,10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(x+40*s,y+102*s,5*s,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#0f0e0c';ctx.lineWidth=3*s;
-    ctx.beginPath();ctx.moveTo(x+70*s,y+100*s);ctx.lineTo(x+90*s,y+105*s);ctx.stroke();
+    ctx.strokeStyle='#0f0e0c';ctx.lineWidth=3*s;ctx.beginPath();ctx.moveTo(x+70*s,y+100*s);ctx.lineTo(x+90*s,y+105*s);ctx.stroke();
   }else if(av.eyes==='wide'){
     ctx.fillStyle='#fff';
     ctx.beginPath();ctx.ellipse(x+40*s,y+102*s,13*s,13*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.beginPath();ctx.ellipse(x+80*s,y+102*s,13*s,13*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillStyle='#1a1a1a';
-    ctx.beginPath();ctx.arc(x+40*s,y+102*s,6*s,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(x+40*s,y+102*s,6*s,0,Math.PI*2);ctx.fill();
     ctx.beginPath();ctx.arc(x+80*s,y+102*s,6*s,0,Math.PI*2);ctx.fill();
   }else if(av.eyes==='mono'){
-    ctx.fillStyle='#fff';
-    ctx.beginPath();ctx.ellipse(x+40*s,y+102*s,10*s,10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(x+40*s,y+102*s,10*s,10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(x+40*s,y+102*s,5*s,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
-    ctx.beginPath();ctx.arc(x+80*s,y+102*s,10*s,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;ctx.beginPath();ctx.arc(x+80*s,y+102*s,10*s,0,Math.PI*2);ctx.stroke();
     ctx.beginPath();ctx.moveTo(x+90*s,y+93*s);ctx.lineTo(x+100*s,y+88*s);ctx.stroke();
   }
-
-  // Boca
   ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2.5*s;ctx.lineCap='round';
-  if(av.mouth==='smile'){
-    ctx.beginPath();ctx.arc(x+60*s,y+122*s,15*s,0.2,Math.PI-0.2);ctx.stroke();
-  }else if(av.mouth==='grin'){
-    ctx.fillStyle='#fff';
-    ctx.beginPath();ctx.arc(x+60*s,y+122*s,18*s,0.1,Math.PI-0.1);ctx.fill();ctx.stroke();
-  }else if(av.mouth==='serious'){
-    ctx.beginPath();ctx.moveTo(x+44*s,y+128*s);ctx.lineTo(x+76*s,y+128*s);ctx.stroke();
-  }else if(av.mouth==='tongue'){
-    ctx.beginPath();ctx.arc(x+60*s,y+122*s,15*s,0.2,Math.PI-0.2);ctx.stroke();
-    ctx.fillStyle='#e84c1e';
-    ctx.beginPath();ctx.ellipse(x+60*s,y+137*s,8*s,7*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-  }else if(av.mouth==='mustache'){
-    ctx.beginPath();ctx.arc(x+60*s,y+126*s,12*s,0.3,Math.PI-0.3);ctx.stroke();
-    ctx.lineWidth=4*s;
-    ctx.beginPath();ctx.moveTo(x+42*s,y+118*s);ctx.quadraticCurveTo(x+52*s,y+116*s,x+60*s,y+119*s);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(x+78*s,y+118*s);ctx.quadraticCurveTo(x+68*s,y+116*s,x+60*s,y+119*s);ctx.stroke();
-  }else if(av.mouth==='beard'){
-    ctx.beginPath();ctx.arc(x+60*s,y+122*s,15*s,0.2,Math.PI-0.2);ctx.stroke();
-    ctx.fillStyle='#'+av.hairColor;
-    ctx.beginPath();ctx.ellipse(x+60*s,y+138*s,18*s,10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-  }
-
-  // Sombrero
+  if(av.mouth==='smile'){ctx.beginPath();ctx.arc(x+60*s,y+122*s,15*s,0.2,Math.PI-0.2);ctx.stroke();}
+  else if(av.mouth==='grin'){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x+60*s,y+122*s,18*s,0.1,Math.PI-0.1);ctx.fill();ctx.stroke();}
+  else if(av.mouth==='serious'){ctx.beginPath();ctx.moveTo(x+44*s,y+128*s);ctx.lineTo(x+76*s,y+128*s);ctx.stroke();}
+  else if(av.mouth==='tongue'){ctx.beginPath();ctx.arc(x+60*s,y+122*s,15*s,0.2,Math.PI-0.2);ctx.stroke();ctx.fillStyle='#e84c1e';ctx.beginPath();ctx.ellipse(x+60*s,y+137*s,8*s,7*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  else if(av.mouth==='mustache'){ctx.beginPath();ctx.arc(x+60*s,y+126*s,12*s,0.3,Math.PI-0.3);ctx.stroke();ctx.lineWidth=4*s;ctx.beginPath();ctx.moveTo(x+42*s,y+118*s);ctx.quadraticCurveTo(x+52*s,y+116*s,x+60*s,y+119*s);ctx.stroke();ctx.beginPath();ctx.moveTo(x+78*s,y+118*s);ctx.quadraticCurveTo(x+68*s,y+116*s,x+60*s,y+119*s);ctx.stroke();}
+  else if(av.mouth==='beard'){ctx.beginPath();ctx.arc(x+60*s,y+122*s,15*s,0.2,Math.PI-0.2);ctx.stroke();ctx.fillStyle='#'+av.hairColor;ctx.beginPath();ctx.ellipse(x+60*s,y+138*s,18*s,10*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();}
   if(av.hat==='cap'){
     ctx.fillStyle='#'+av.shirt;ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
     ctx.beginPath();ctx.ellipse(x+60*s,y+68*s,46*s,10*s,0,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.fillRect(x+20*s,y+40*s,80*s,32*s);ctx.stroke();
     ctx.beginPath();ctx.ellipse(x+80*s,y+68*s,30*s,7*s,0,0,Math.PI);ctx.fill();ctx.stroke();
-  }else if(av.hat==='top'){
-    ctx.fillStyle='#1a1a1a';ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
-    ctx.fillRect(x+28*s,y+35*s,64*s,40*s);ctx.stroke();
-    ctx.fillRect(x+18*s,y+72*s,84*s,10*s);ctx.stroke();
-  }else if(av.hat==='crown'){
-    ctx.fillStyle='#e8a81e';ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
-    ctx.beginPath();ctx.moveTo(x+20*s,y+72*s);ctx.lineTo(x+20*s,y+50*s);ctx.lineTo(x+35*s,y+62*s);ctx.lineTo(x+60*s,y+44*s);ctx.lineTo(x+85*s,y+62*s);ctx.lineTo(x+100*s,y+50*s);ctx.lineTo(x+100*s,y+72*s);ctx.closePath();ctx.fill();ctx.stroke();
-  }else if(av.hat==='chef'){
-    ctx.fillStyle='#fff';ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
-    ctx.fillRect(x+32*s,y+55*s,56*s,20*s);ctx.stroke();
-    ctx.beginPath();ctx.ellipse(x+60*s,y+46*s,30*s,22*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-  }else if(av.hat==='beret'){
-    ctx.fillStyle='#'+av.shirt;ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
-    ctx.beginPath();ctx.ellipse(x+55*s,y+62*s,40*s,22*s,-0.3,0,Math.PI*2);ctx.fill();ctx.stroke();
-  }
-
-  // Brazos
+  }else if(av.hat==='top'){ctx.fillStyle='#1a1a1a';ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;ctx.fillRect(x+28*s,y+35*s,64*s,40*s);ctx.stroke();ctx.fillRect(x+18*s,y+72*s,84*s,10*s);ctx.stroke();}
+  else if(av.hat==='crown'){ctx.fillStyle='#e8a81e';ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;ctx.beginPath();ctx.moveTo(x+20*s,y+72*s);ctx.lineTo(x+20*s,y+50*s);ctx.lineTo(x+35*s,y+62*s);ctx.lineTo(x+60*s,y+44*s);ctx.lineTo(x+85*s,y+62*s);ctx.lineTo(x+100*s,y+50*s);ctx.lineTo(x+100*s,y+72*s);ctx.closePath();ctx.fill();ctx.stroke();}
+  else if(av.hat==='chef'){ctx.fillStyle='#fff';ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;ctx.fillRect(x+32*s,y+55*s,56*s,20*s);ctx.stroke();ctx.beginPath();ctx.ellipse(x+60*s,y+46*s,30*s,22*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  else if(av.hat==='beret'){ctx.fillStyle='#'+av.shirt;ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;ctx.beginPath();ctx.ellipse(x+55*s,y+62*s,40*s,22*s,-0.3,0,Math.PI*2);ctx.fill();ctx.stroke();}
   ctx.fillStyle=sh;ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
   ctx.beginPath();ctx.roundRect(x+0*s,y+162*s,22*s,60*s,8*s);ctx.fill();ctx.stroke();
   ctx.beginPath();ctx.roundRect(x+98*s,y+162*s,22*s,60*s,8*s);ctx.fill();ctx.stroke();
-
-  // Manos
   ctx.fillStyle=sk;
   ctx.beginPath();ctx.arc(x+11*s,y+228*s,11*s,0,Math.PI*2);ctx.fill();ctx.stroke();
   ctx.beginPath();ctx.arc(x+109*s,y+228*s,11*s,0,Math.PI*2);ctx.fill();ctx.stroke();
-
-  // Piernas
   ctx.fillStyle='#334';ctx.strokeStyle='#0f0e0c';ctx.lineWidth=2*s;
   ctx.beginPath();ctx.roundRect(x+25*s,y+240*s,30*s,38*s,6*s);ctx.fill();ctx.stroke();
   ctx.beginPath();ctx.roundRect(x+65*s,y+240*s,30*s,38*s,6*s);ctx.fill();ctx.stroke();
-
-  // Pies
   ctx.fillStyle='#222';
   ctx.beginPath();ctx.ellipse(x+40*s,y+276*s,20*s,8*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
   ctx.beginPath();ctx.ellipse(x+80*s,y+276*s,20*s,8*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
 }
 
-// ── Dibujar miniavatar (sidebar) ──────────────────────────────
 function drawMiniAvatar(av,size){
   size=size||40;
   const c=document.createElement('canvas');
   c.width=size;c.height=size;c.className='mini-avatar';
   const cx=c.getContext('2d');
-  cx.save();
-  const scale=size/120;
-  cx.scale(scale,scale);
-  // Solo cabeza centrada
-  const sk='#'+av.skin;
-  cx.fillStyle=sk;
-  cx.beginPath();cx.ellipse(60,55,40,44,0,0,Math.PI*2);cx.fill();
+  cx.save();cx.scale(size/120,size/120);
+  cx.fillStyle='#'+av.skin;cx.beginPath();cx.ellipse(60,55,40,44,0,0,Math.PI*2);cx.fill();
   cx.strokeStyle='#0f0e0c';cx.lineWidth=2;cx.stroke();
-  // Pelo mini
   cx.fillStyle='#'+av.hairColor;
   if(av.hair!=='bald'){cx.beginPath();cx.ellipse(60,25,41,22,0,Math.PI,Math.PI*2);cx.fill();cx.stroke();}
-  // Ojos mini
   cx.fillStyle='#fff';
   cx.beginPath();cx.arc(44,52,7,0,Math.PI*2);cx.fill();cx.stroke();
   cx.beginPath();cx.arc(76,52,7,0,Math.PI*2);cx.fill();cx.stroke();
   cx.fillStyle='#1a1a1a';
   cx.beginPath();cx.arc(44,52,3.5,0,Math.PI*2);cx.fill();
   cx.beginPath();cx.arc(76,52,3.5,0,Math.PI*2);cx.fill();
-  // Boca mini
   cx.strokeStyle='#0f0e0c';cx.lineWidth=2;
   cx.beginPath();cx.arc(60,67,10,0.3,Math.PI-0.3);cx.stroke();
   cx.restore();
   return c;
 }
 
-<script>
+// ── Temas ─────────────────────────────────────────────────────
 const THEMES = {
   general:{name:'General',emoji:'🎲',words:['gato','perro','casa','árbol','coche','playa','luna','sol','mar','montaña','libro','puerta','ventana','silla','mesa','teléfono','reloj','zapato','sombrero','paraguas','globo','vela','mapa','brújula','lupa','espejo','llave','tijeras','martillo','pincel','escalera','cubo','linterna','anillo','corona']},
   animales:{name:'Animales',emoji:'🐾',words:['tiburón','delfín','ballena','tortuga','pingüino','cocodrilo','elefante','jirafa','cebra','gorila','panda','koala','canguro','flamenco','camello','rinoceronte','hipopótamo','leopardo','lobo','zorro','erizo','murciélago','pulpo','medusa','cangrejo','rana','serpiente','loro','tucán','avestruz','pavo real','mariposa','abeja','escarabajo','hormiga','ciervo','búho','águila','foca','delfín']},
@@ -613,6 +541,7 @@ const THEMES = {
   hogar:{name:'Hogar',emoji:'🏠',words:['sofá','cama','mesilla','armario','nevera','horno','microondas','lavadora','lavavajillas','aspiradora','plancha','secador','batidora','cafetera','tostadora','televisión','lámpara','estantería','alfombra','cortina','persiana','espejo','cuadro','jarrón','cojín','manta','almohada','sábana','toalla','jabón','champú','cepillo','peine','tijeras','aguja','hilo','botón','enchufe','bombilla','termostato']}
 };
 
+// ── Estado ────────────────────────────────────────────────────
 let selectedThemes=new Set(),activeWordPool=[],usedWords=[];
 let ws=null,wsReconnectTimer=null;
 let myId='',myName='',roomCode='',isHost=false,isDrawing=false;
@@ -622,13 +551,12 @@ let timerInterval=null,timerLeft=0,gameActive=false;
 let turnOrder=[],turnIndex=0;
 let canvas,ctx,drawing=false,lastX=0,lastY=0;
 let currentColor='#0f0e0c',currentSize=3,currentTool='pen';
+let strokeBatch=[],batchTimer=null;
 let guessOrder=0,painterPointsThisTurn=0,maxGuesserPoints=0;
-let guessOrder = 0; // contador de posición de adivinadores en el turno
-let painterPointsThisTurn = 0; // puntos acumulados del pintor este turno
-let maxGuesserPoints = 0; // máximo que ha ganado un adivinador (para limitar al pintor)
 
 const WS_URL='wss://pincel-production-1a1f.up.railway.app';
 
+// ── WebSocket ─────────────────────────────────────────────────
 function connectWS(){
   if(ws&&ws.readyState===WebSocket.OPEN)return;
   const params=new URLSearchParams({room:roomCode,id:myId,name:myName});
@@ -661,17 +589,23 @@ function sendMsg(type,data){
   }
 }
 
+// ── Mensajes ──────────────────────────────────────────────────
 function handleMessage(msg){
   switch(msg.type){
     case 'roomFull':
       alert(`La sala está llena (máximo ${msg.max} jugadores).`);
       showScreen('lobby');break;
+    case 'kicked':
+      alert('Has sido expulsado: '+(msg.reason||'spam'));
+      showScreen('lobby');break;
+    case 'serverRestart':
+      showToast('El servidor se reinicia, reconectando…');break;
     case 'welcome':
-      if(msg.players){msg.players.forEach(p=>{if(!players[p.id])players[p.id]={name:p.name,score:p.score||0,guessed:false};});updatePlayersGrid();updateScoreList();}break;
+      if(msg.players){msg.players.forEach(p=>{if(!players[p.id])players[p.id]={name:p.name,score:p.score||0,guessed:false,avatar:p.avatar||null};});updatePlayersGrid();updateScoreList();}break;
     case 'rejoinOk':
       if(players[myId])players[myId].score=msg.score||0;
       showToast('¡Reconectado! Puntos recuperados: '+(msg.score||0));
-      if(msg.players){msg.players.forEach(p=>{if(!players[p.id])players[p.id]={name:p.name,score:p.score||0,guessed:false};else players[p.id].score=p.score||0;});}
+      if(msg.players){msg.players.forEach(p=>{if(!players[p.id])players[p.id]={name:p.name,score:p.score||0,guessed:false,avatar:p.avatar||null};else{players[p.id].score=p.score||0;if(p.avatar)players[p.id].avatar=p.avatar;}});}
       updatePlayersGrid();updateScoreList();break;
     case 'canvasSnapshot':
       if(msg.strokes&&Array.isArray(msg.strokes))msg.strokes.forEach(s=>{if(s.data&&s.data.strokes)onRemoteDraw(s.data);});break;
@@ -682,9 +616,15 @@ function handleMessage(msg){
     case 'playerLeft':
       if(players[msg.id||msg.from]){addChat({type:'system',text:(msg.name||players[msg.id||msg.from]?.name||'?')+' abandonó la partida.'});delete players[msg.id||msg.from];updatePlayersGrid();updateScoreList();}break;
     case 'room-state':
-      if(msg.data&&msg.data.players)msg.data.players.forEach(p=>{players[p.id]={name:p.name,score:0,guessed:false};});
+      if(msg.data&&msg.data.players)msg.data.players.forEach(p=>{players[p.id]={name:p.name,score:0,guessed:false,avatar:p.avatar||null};});
       updatePlayersGrid();updateScoreList();break;
     case 'player-join':
+      if(msg.from!==myId){
+        players[msg.from]={name:msg.fromName,score:0,guessed:false,avatar:msg.data?.avatar||null};
+        updatePlayersGrid();updateScoreList();
+        addChat({type:'system',text:msg.fromName+' se unió.'});
+        if(gameActive&&isDrawing)setTimeout(()=>sendCanvasSync(msg.from),600);
+      }break;
     case 'player-leave':
       if(players[msg.from]){addChat({type:'system',text:players[msg.from].name+' se fue.'});delete players[msg.from];updatePlayersGrid();updateScoreList();}break;
     case 'game-start':   onGameStart(msg.data);break;
@@ -701,61 +641,39 @@ function handleMessage(msg){
 }
 
 function markPlayerState(id,online){document.querySelectorAll('.player-chip[data-id="'+id+'"]').forEach(c=>c.classList.toggle('offline',!online));}
-// ── Editor de avatares ────────────────────────────────────────
+
+// ── Avatar editor ─────────────────────────────────────────────
 function setupAvatarEditor(){
   const previewCanvas=document.getElementById('avatarPreview');
   const pctx=previewCanvas.getContext('2d');
-
-  function redraw(){
-    pctx.clearRect(0,0,200,280);
-    drawAvatar(pctx,myAvatar,0,0,1);
-  }
-
+  function redraw(){pctx.clearRect(0,0,200,280);drawAvatar(pctx,myAvatar,0,0,1);}
   redraw();
-
   document.querySelectorAll('.av-opt').forEach(el=>{
     el.addEventListener('click',()=>{
-      const cat=el.dataset.cat;
-      const val=el.dataset.val;
+      const cat=el.dataset.cat,val=el.dataset.val;
       myAvatar[cat]=val;
-      // Quitar active de la misma categoría
       document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));
       el.classList.add('active');
       redraw();
       localStorage.setItem('pincelAvatar',JSON.stringify(myAvatar));
     });
   });
-
-  // Marcar opciones activas según avatar guardado
   Object.entries(myAvatar).forEach(([cat,val])=>{
     const el=document.querySelector(`.av-opt[data-cat="${cat}"][data-val="${val}"]`);
-    if(el){
-      document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));
-      el.classList.add('active');
-    }
+    if(el){document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));el.classList.add('active');}
   });
-
   document.getElementById('avatarNameDisplay').textContent=myName;
-
   document.getElementById('btnAvatarDone').addEventListener('click',()=>{
     localStorage.setItem('pincelAvatar',JSON.stringify(myAvatar));
     showScreen('waiting');
     setupWaitingRoom();
-    // Anunciar avatar al servidor
     if(ws&&ws.readyState===WebSocket.OPEN){
       ws.send(JSON.stringify({type:'player-join',from:myId,fromName:myName,data:{name:myName,isHost,avatar:myAvatar}}));
     }
   });
 }
 
-// ── Actualizar miniavatar en sidebar ──────────────────────────
-function updatePlayerAvatar(id,av){
-  if(!av)return;
-  players[id].avatar=av;
-  updateScoreList();
-  updatePlayersGrid();
-}
-
+// ── Temas UI ──────────────────────────────────────────────────
 function buildThemesGrid(){
   document.getElementById('themesGrid').innerHTML=Object.entries(THEMES).map(([key,t])=>`<div class="theme-btn" data-key="${key}" onclick="toggleTheme('${key}')"><span class="theme-emoji">${t.emoji}</span>${t.name}</div>`).join('');
   document.getElementById('customWords').addEventListener('input',updateCustomWordCount);
@@ -766,19 +684,16 @@ function updateCustomWordCount(){document.getElementById('customWordCount').text
 function parseCustomWords(){return document.getElementById('customWords').value.split(',').map(w=>w.trim().toLowerCase()).filter(w=>w.length>0);}
 function buildWordPool(){let pool=[];const custom=parseCustomWords();if(custom.length>0)pool=[...custom];if(selectedThemes.size>0)selectedThemes.forEach(key=>pool=pool.concat(THEMES[key].words));else if(custom.length===0)Object.values(THEMES).forEach(t=>pool=pool.concat(t.words));return[...new Set(pool)];}
 
+// ── DOMContentLoaded ──────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
   buildThemesGrid();updateSelectedTags();setupLobbyUI();
   canvas=document.getElementById('drawCanvas');ctx=canvas.getContext('2d');
   setupCanvas();setupToolbar();setupChat();
   const p=new URLSearchParams(location.search);
   if(p.get('room')){document.querySelector('[data-tab="join"]').click();document.getElementById('joinCode').value=p.get('room').toUpperCase();}
-  // Cargar avatar guardado en las opciones del editor
   Object.entries(myAvatar).forEach(([cat,val])=>{
     const el=document.querySelector(`.av-opt[data-cat="${cat}"][data-val="${val}"]`);
-    if(el){
-      document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));
-      el.classList.add('active');
-    }
+    if(el){document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));el.classList.add('active');}
   });
 });
 
@@ -799,7 +714,7 @@ function handleCreate(){
   activeWordPool=buildWordPool();
   if(activeWordPool.length<5){showError('createError','Añade al menos 5 palabras');return;}
   myName=name;isHost=true;myId='p_'+Math.random().toString(36).slice(2,9);
-  roomCode=genCode();players[myId]={name:myName,score:0,guessed:false};
+  roomCode=genCode();players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
   connectWS();showScreen('avatar');setupAvatarEditor();
 }
 
@@ -809,7 +724,7 @@ function handleJoin(){
   if(!name){showError('joinError','Necesitas un nombre');return;}
   if(code.length!==4){showError('joinError','Código de 4 caracteres');return;}
   myName=name;isHost=false;myId='p_'+Math.random().toString(36).slice(2,9);
-  roomCode=code;players[myId]={name:myName,score:0,guessed:false};
+  roomCode=code;players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
   connectWS();showScreen('avatar');setupAvatarEditor();
 }
 
@@ -838,6 +753,7 @@ function updatePlayersGrid(){
     return tmp.outerHTML;
   }).join('');
 }
+
 function copyCode(){navigator.clipboard.writeText(roomCode).then(()=>showToast('¡Código copiado!'));}
 
 function startGame(){
@@ -858,9 +774,7 @@ function onGameStart(data){
 
 function startTurn(){
   clearCanvas();Object.keys(players).forEach(id=>players[id].guessed=false);
- guessOrder=0;painterPointsThisTurn=0;maxGuesserPoints=0;
-  painterPointsThisTurn = 0;
-  maxGuesserPoints = 0;
+  guessOrder=0;painterPointsThisTurn=0;maxGuesserPoints=0;
   currentDrawerId=turnOrder[turnIndex%turnOrder.length];
   isDrawing=(currentDrawerId===myId);
   document.getElementById('toolbar').classList.toggle('hidden',!isDrawing);
@@ -887,6 +801,7 @@ function onSyncCanvas(data){if(isDrawing)return;const img=new Image();img.onload
 function startTimer(secs){clearInterval(timerInterval);timerLeft=secs;updateTimerEl();timerInterval=setInterval(()=>{timerLeft--;updateTimerEl();if(timerLeft<=0){clearInterval(timerInterval);if(isDrawing)endTurn();}},1000);}
 function updateTimerEl(){const el=document.getElementById('timerDisplay');el.textContent=timerLeft;el.classList.toggle('urgent',timerLeft<=10);}
 
+// ── Canvas ────────────────────────────────────────────────────
 function setupCanvas(){
   resizeCanvas();window.addEventListener('resize',resizeCanvas);
   canvas.addEventListener('pointerdown',startDraw);canvas.addEventListener('pointermove',doDraw);
@@ -918,6 +833,7 @@ function flushBatch(){if(!strokeBatch.length)return;const s=[...strokeBatch];str
 function onRemoteDraw(data){data.strokes.forEach(s=>{ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();});}
 function clearCanvas(){ctx.fillStyle='#fffef9';ctx.fillRect(0,0,canvas.width,canvas.height);}
 
+// ── Toolbar ───────────────────────────────────────────────────
 function setupToolbar(){
   document.querySelectorAll('.color-swatch').forEach(sw=>sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');currentColor=sw.dataset.color;if(currentTool==='eraser')setTool('pen');}));
   document.querySelectorAll('.size-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentSize=parseInt(btn.dataset.size);}));
@@ -927,6 +843,7 @@ function setupToolbar(){
 }
 function setTool(t){currentTool=t;document.getElementById('toolPen').classList.toggle('active',t==='pen');document.getElementById('toolEraser').classList.toggle('active',t==='eraser');}
 
+// ── Chat ──────────────────────────────────────────────────────
 function setupChat(){
   const input=document.getElementById('chatInput');
   const send=()=>{
@@ -945,37 +862,27 @@ function onGuess(msg){if(!gameActive)return;const{senderId,senderName,text}=msg.
 function procesarAdivinanza(senderId,senderName,text){
   if(!currentWord||!gameActive)return;
   const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-
   if(norm(text)===norm(currentWord)){
     if(players[senderId]&&!players[senderId].guessed){
       players[senderId].guessed=true;
       guessOrder++;
-
-      // Puntos según posición
       let pts;
       if(guessOrder===1)pts=300;
       else if(guessOrder===2)pts=250;
       else if(guessOrder===3)pts=200;
       else pts=Math.max(50,200-(guessOrder-3)*25);
-
       players[senderId].score+=pts;
       if(guessOrder===1)maxGuesserPoints=pts;
-
-      // Puntos pintor: 25% de lo que gana el adivinador, sin superar al primero
       const painterGain=Math.round(pts*0.25);
       painterPointsThisTurn=Math.min(painterPointsThisTurn+painterGain,maxGuesserPoints);
       if(players[currentDrawerId]){
-        // Recalcular score del pintor limpio
-        const prevPainter=players[currentDrawerId].score-( painterPointsThisTurn-painterGain<0?0:painterPointsThisTurn-painterGain);
-        players[currentDrawerId].score=prevPainter+painterPointsThisTurn;
+        const prev=players[currentDrawerId].score-(painterPointsThisTurn-painterGain<0?0:painterPointsThisTurn-painterGain);
+        players[currentDrawerId].score=prev+painterPointsThisTurn;
       }
-
       addChat({type:'correct',text:'¡'+san(senderName)+' lo adivinó! +'+pts+' pts'});
       updateScoreList();
-
       if(senderId===myId){showToast('¡Correcto! +'+pts+' pts 🎉');launchConfetti();}
       if(currentDrawerId===myId){showToast('¡Alguien adivinó! +'+painterGain+' pts para ti 🎨');}
-
       const nonDrawers=Object.keys(players).filter(id=>id!==currentDrawerId);
       if(nonDrawers.every(id=>players[id].guessed)&&isDrawing)setTimeout(()=>endTurn(),1000);
     }
@@ -1005,9 +912,7 @@ function onTurnEnd(data){
   document.getElementById('roundEndTitle').textContent='La palabra era...';
   document.getElementById('answerReveal').textContent=(data.word||'').toUpperCase();
   document.getElementById('scoreSummary').innerHTML=Object.entries(players).sort((a,b)=>b[1].score-a[1].score).map(([,p])=>`<div class="score-pill gainer">${san(p.name)}: ${p.score} pts</div>`).join('');
-  if (currentDrawerId === myId && painterPointsThisTurn > 0) {
-  addChat({ type: 'system', text: '🎨 Ganaste ' + painterPointsThisTurn + ' pts pintando este turno.' });
-}
+  if(currentDrawerId===myId&&painterPointsThisTurn>0)addChat({type:'system',text:'🎨 Ganaste '+painterPointsThisTurn+' pts pintando este turno.'});
   document.getElementById('roundEnd').classList.add('active');
   setTimeout(()=>{
     document.getElementById('roundEnd').classList.remove('active');
@@ -1021,8 +926,6 @@ function updateRoundInfo(){document.getElementById('roundInfo').textContent='RON
 
 function updateScoreList(){
   document.getElementById('scoreList').innerHTML=Object.entries(players).sort((a,b)=>b[1].score-a[1].score).map(([id,p],i)=>{
-    const av=p.avatar||DEFAULT_AVATAR;
-    const mini=drawMiniAvatar(av,32);
     const miniHtml=`<canvas width="32" height="32" class="mini-avatar" data-avid="${id}"></canvas>`;
     return`<div class="score-item ${id===currentDrawerId?'drawing':''} ${p.guessed?'guessed':''}">
       ${miniHtml}
@@ -1032,14 +935,12 @@ function updateScoreList(){
       <div class="score-pts">${p.score}</div>
     </div>`;
   }).join('');
-  // Dibujar miniavatares en los canvas del scoreList
   document.querySelectorAll('[data-avid]').forEach(c=>{
     const id=c.dataset.avid;
     const av=players[id]?.avatar||DEFAULT_AVATAR;
     const cx=c.getContext('2d');
     cx.save();cx.scale(32/120,32/120);
-    const sk='#'+av.skin;
-    cx.fillStyle=sk;cx.beginPath();cx.ellipse(60,55,40,44,0,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#'+av.skin;cx.beginPath();cx.ellipse(60,55,40,44,0,0,Math.PI*2);cx.fill();
     cx.strokeStyle='#0f0e0c';cx.lineWidth=2;cx.stroke();
     cx.fillStyle='#'+av.hairColor;
     if(av.hair!=='bald'){cx.beginPath();cx.ellipse(60,25,41,22,0,Math.PI,Math.PI*2);cx.fill();cx.stroke();}
