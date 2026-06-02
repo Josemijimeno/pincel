@@ -358,8 +358,11 @@ function useFallback(code){
 
 function sendMsg(type,data){
   const msg={type,data,from:myId,fromName:myName};
-  if(ws&&ws.readyState===1)ws.send(JSON.stringify(msg));else if(bc)bc.postMessage(msg);
-  if(type!=='draw'&&type!=='canvas-sync')handleMessage(msg);
+  const str=JSON.stringify(msg);
+  if(ws&&ws.readyState===1)ws.send(str);
+  else if(bc)bc.postMessage(msg);
+  if(type==='draw'||type==='canvas-sync')return;
+  handleMessage(msg);
 }
 
 function handleMessage(msg) {
