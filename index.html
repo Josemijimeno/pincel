@@ -338,13 +338,28 @@ function buildWordPool(){
 }
 
 function connectWS(code,name,host){
-  const st=document.getElementById('connectionStatus');st.textContent='Conectando...';
+  const st=document.getElementById('connectionStatus');
+  st.textContent='Conectando...';
+  if(ws){try{ws.onclose=null;ws.close();}catch(e){}}
   try{
     ws=new WebSocket(WS_URL+'?room='+code+'&id='+myId+'&name='+encodeURIComponent(name)+'&host='+(host?1:0));
-    ws.onopen=()=>{st.textContent='● Online';st.style.background='var(--success)';onConnected();};
+    ws.onopen=()=>{
+      st.textContent='● Online';st.style.background='var(--success)';
+      // Ping manual cada 20s para mantener vivo
+      clearInterval(ws._ping);
+      ws._ping=setInterval(()=>{ if(ws.readyState===1) ws.send(JSON.stringify({type:'ping',from:myId,fromName:myName,data:{}})); },20000);
+      onConnected();
+    };
     ws.onmessage=e=>{try{handleMessage(JSON.parse(e.data));}catch(ex){}};
-    ws.onerror=()=>useFallback(code);
-    ws.onclose=()=>{st.textContent='○ Reconectando...';st.style.background='var(--warn)';setTimeout(()=>{if(gameActive)connectWS(code,name,host);},3000);};
+    ws.onerror=()=>{};
+    ws.onclose=()=>{
+      clearInterval(ws._ping);
+      st.textContent='○ Sin conexión';st.style.background='#999';
+      // Solo reconectar si estamos en partida, con delay largo
+      if(gameActive||document.getElementById('waiting').classList.contains('active')){
+        setTimeout(()=>connectWS(code,name,host),5000);
+      }
+    };
   }catch(e){useFallback(code);}
 }
 
@@ -359,12 +374,18 @@ function useFallback(code){
 function sendMsg(type,data){
   const msg={type,data,from:myId,fromName:myName};
   const str=JSON.stringify(msg);
-  if(ws&&ws.readyState===1)ws.send(str);
-  else if(bc)bc.postMessage(msg);
-  if(type==='draw'||type==='canvas-sync')return;
-  handleMessage(msg);
+  if(ws&&ws.readyState===1){
+    ws.send(str);
+    // draw y canvas-sync el servidor NO nos los devuelve, procesamos local
+    if(type==='draw'||type==='canvas-sync')return;
+    // El servidor SÍ nos devuelve el resto, NO procesamos local para evitar duplicados
+    // EXCEPTO estos tipos que necesitamos procesar local inmediatamente:
+    if(type==='word-options'||type==='request-sync')handleMessage(msg);
+  } else if(bc){
+    bc.postMessage(msg);
+    handleMessage(msg);
+  }
 }
-
 function handleMessage(msg) {
   switch(msg.type) {
     case 'room-state':
@@ -622,31 +643,38 @@ function setupToolbar(){
 }
 
 function setTool(t){currentTool=t;document.getElementById('toolPen').classList.toggle('active',t==='pen');document.getElementById('toolEraser').classList.toggle('active',t==='eraser');}
-
+ 
 function setupChat(){
   const input=document.getElementById('chatInput');
   const send=()=>{
     const text=input.value.trim();
     if(!text||isDrawing)return;
     input.value='';
-    // Mostrar inmediatamente en mi propio chat
-    addChat({type:'chat',name:myName,text});
-    // Enviar al servidor para que lo distribuya a los demás
     const msg={type:'guess',data:{senderId:myId,senderName:myName,text},from:myId,fromName:myName};
     const str=JSON.stringify(msg);
+    // Mostrar el mío inmediatamente
+    addChat({type:'chat',name:myName,text});
+    // Enviar al servidor (él lo manda a todos incluido yo, pero lo ignoramos al recibirlo)
     if(ws&&ws.readyState===1)ws.send(str);
     else if(bc)bc.postMessage(msg);
+    // Procesar la lógica de adivinanza localmente
+    procesarAdivinanza(myId,myName,text);
   };
   input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
   document.getElementById('sendBtn').addEventListener('click',send);
 }
-
 function onGuess(msg){
   if(!gameActive)return;
   const{senderId,senderName,text}=msg.data;
-  if(senderId===myId)return; // Ya lo mostramos al enviar
+  // Ignorar el mío porque ya lo mostramos al enviar
+  if(senderId===myId)return;
+  addChat({type:'chat',name:senderName,text});
+  procesarAdivinanza(senderId,senderName,text);
+}
+function procesarAdivinanza(senderId,senderName,text){
+  if(!currentWord||!gameActive)return;
   const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  if(currentWord&&norm(text)===norm(currentWord)){
+  if(norm(text)===norm(currentWord)){
     if(players[senderId]&&!players[senderId].guessed){
       players[senderId].guessed=true;
       const pts=Math.max(100,Math.round(50+(timerLeft/turnTime)*450));
@@ -658,9 +686,9 @@ function onGuess(msg){
       const nonDrawers=Object.keys(players).filter(id=>id!==currentDrawerId);
       if(nonDrawers.every(id=>players[id].guessed)&&isDrawing)setTimeout(()=>endTurn(),1000);
     }
-  }else{
-    const close=isClose(norm(text),norm(currentWord||''));
-    addChat({type:close?'close':'chat',name:senderName,text});
+  } else if(currentWord){
+    const close=isClose(norm(text),norm(currentWord));
+    if(close&&senderId===myId)addChat({type:'close',name:senderName,text:'¡Muy cerca!'});
   }
 }
 function isClose(a,b){if(!b||Math.abs(a.length-b.length)>3)return false;let d=0;for(let i=0;i<Math.max(a.length,b.length);i++)if(a[i]!==b[i])d++;return d<=2;}
