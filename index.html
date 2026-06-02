@@ -362,32 +362,46 @@ function sendMsg(type,data){
   if(type!=='draw'&&type!=='canvas-sync')handleMessage(msg);
 }
 
-function handleMessage(msg){
-  switch(msg.type){
-    case 'player-join':if(msg.from!==myId){players[msg.from]={name:msg.fromName,score:0,guessed:false};updatePlayersGrid();updateScoreList();addChat({type:'system',text:msg.fromName+' se unió.'});if(gameActive&&isDrawing)setTimeout(()=>sendCanvasSync(msg.from),600);}break;
-    case 'player-leave':{const n=players[msg.from]?.name||'Alguien';delete players[msg.from];updatePlayersGrid();updateScoreList();addChat({type:'system',text:n+' se fue.'});}break;
-    case 'game-start':onGameStart(msg.data);break;
-    case 'word-options':if(msg.data.for===myId)showWordModal(msg.data.words);break;
-    case 'word-chosen':onWordChosen(msg.data);break;
-    case 'draw':if(msg.from!==myId)onRemoteDraw(msg.data);break;
-    case 'clear':if(msg.from!==myId)clearCanvas();break;
-    case 'guess':onGuess(msg);break;
-    case 'turn-end':onTurnEnd(msg.data);break;
-    case 'game-end':onGameEnd(msg.data);break;
-    case 'canvas-sync':if(msg.data.for===myId)onSyncCanvas(msg.data);break;
-    case 'request-sync':if(isDrawing)sendCanvasSync(msg.from);break;
+function handleMessage(msg) {
+  switch(msg.type) {
     case 'room-state':
-  msg.data.players.forEach(p => {
-    if (!players[p.id]) {
-      players[p.id] = { name: p.name, score: 0, guessed: false };
-    }
-  });
-  updatePlayersGrid();
-  updateScoreList();
-  break;
+      msg.data.players.forEach(p => {
+        if (!players[p.id]) {
+          players[p.id] = { name: p.name, score: 0, guessed: false };
+        }
+      });
+      updatePlayersGrid();
+      updateScoreList();
+      break;
+    case 'player-join':
+      if (msg.from !== myId) {
+        players[msg.from] = { name: msg.fromName, score: 0, guessed: false };
+        updatePlayersGrid();
+        updateScoreList();
+        addChat({ type: 'system', text: msg.fromName + ' se unió.' });
+        if (gameActive && isDrawing) setTimeout(() => sendCanvasSync(msg.from), 600);
+      }
+      break;
+    case 'player-leave':
+      if (players[msg.from]) {
+        addChat({ type: 'system', text: players[msg.from].name + ' se fue.' });
+        delete players[msg.from];
+        updatePlayersGrid();
+        updateScoreList();
+      }
+      break;
+    case 'game-start':    onGameStart(msg.data); break;
+    case 'word-options':  if (msg.data.for === myId) showWordModal(msg.data.words); break;
+    case 'word-chosen':   onWordChosen(msg.data); break;
+    case 'draw':          if (msg.from !== myId) onRemoteDraw(msg.data); break;
+    case 'clear':         if (msg.from !== myId) clearCanvas(); break;
+    case 'guess':         onGuess(msg); break;
+    case 'turn-end':      onTurnEnd(msg.data); break;
+    case 'game-end':      onGameEnd(msg.data); break;
+    case 'canvas-sync':   if (msg.data.for === myId) onSyncCanvas(msg.data); break;
+    case 'request-sync':  if (isDrawing) sendCanvasSync(msg.from); break;
   }
 }
-
 window.addEventListener('DOMContentLoaded',()=>{
   buildThemesGrid();updateSelectedTags();setupLobbyUI();
   canvas=document.getElementById('drawCanvas');ctx=canvas.getContext('2d');
