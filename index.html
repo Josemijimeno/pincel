@@ -337,30 +337,37 @@ function buildWordPool(){
   return[...new Set(pool)];
 }
 
-function connectWS(code,name,host){
-  const st=document.getElementById('connectionStatus');
-  st.textContent='Conectando...';
-  if(ws){try{ws.onclose=null;ws.close();}catch(e){}}
-  try{
-    ws=new WebSocket(WS_URL+'?room='+code+'&id='+myId+'&name='+encodeURIComponent(name)+'&host='+(host?1:0));
-    ws.onopen=()=>{
-      st.textContent='● Online';st.style.background='var(--success)';
-      // Ping manual cada 20s para mantener vivo
-      clearInterval(ws._ping);
-      ws._ping=setInterval(()=>{ if(ws.readyState===1) ws.send(JSON.stringify({type:'ping',from:myId,fromName:myName,data:{}})); },20000);
-      onConnected();
-    };
-    ws.onmessage=e=>{try{handleMessage(JSON.parse(e.data));}catch(ex){}};
-    ws.onerror=()=>{};
-    ws.onclose=()=>{
-      clearInterval(ws._ping);
-      st.textContent='○ Sin conexión';st.style.background='#999';
-      // Solo reconectar si estamos en partida, con delay largo
-      if(gameActive||document.getElementById('waiting').classList.contains('active')){
-        setTimeout(()=>connectWS(code,name,host),5000);
-      }
-    };
-  }catch(e){useFallback(code);}
+let ws = null;
+let wsReconnectTimer = null;
+const WS_URL = 'wss://pincel-production-1a1f.up.railway.app'; // tu URL de Railway
+
+function connectWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+
+  const params = new URLSearchParams({
+    room: roomCode,
+    id:   myId,
+    name: myName
+  });
+  ws = new WebSocket(`${WS_URL}?${params}`);
+
+  ws.onopen = () => {
+    console.log('WS conectado');
+    clearTimeout(wsReconnectTimer);
+    document.getElementById('connectionStatus').textContent = '🟢 Conectado';
+  };
+
+  ws.onclose = () => {
+    document.getElementById('connectionStatus').textContent = '🔴 Reconectando…';
+    // Intentar reconectar cada 3 segundos
+    wsReconnectTimer = setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => {
+    ws.close(); // deja que onclose maneje la reconexión
+  };
+
+  ws.onmessage = handleMessage; // tu función de mensajes ya existente
 }
 
 function useFallback(code){
@@ -368,6 +375,47 @@ function useFallback(code){
   st.textContent='● Solo pestañas';st.style.background='var(--warn)';st.style.color='var(--ink)';
   bc=new BroadcastChannel('pincel:'+code);
   bc.onmessage=e=>handleMessage(e.data);
+ // ── Sala llena ──────────────────────────────────────────────────
+case 'roomFull':
+  alert(`La sala está llena (máximo ${msg.max} jugadores).`);
+  // Volver a la pantalla de inicio
+  document.getElementById('lobby').style.display = 'block';
+  document.getElementById('game').style.display  = 'none';
+  break;
+
+// ── Rejoin exitoso ──────────────────────────────────────────────
+case 'rejoinOk':
+  // Restaurar puntuación
+  myScore = msg.score;
+  updateScoreUI(); // tu función para refrescar la UI de puntos
+  showToast('¡Reconectado! Puntos recuperados: ' + msg.score);
+  // Restaurar lista de jugadores
+  if (msg.players) msg.players.forEach(p => updatePlayerInList(p));
+  break;
+
+// ── Canvas recibido al entrar / reconectar ──────────────────────
+case 'canvasSnapshot':
+  // Reproducir todos los trazos guardados
+  msg.strokes.forEach(stroke => drawStroke(stroke)); // tu función de dibujo
+  break;
+
+// ── Jugador temporalmente caído (puede volver) ─────────────────
+case 'playerDisconnected':
+  showToast(`${msg.name} se ha desconectado…`);
+  markPlayerOffline(msg.id); // opcional: poner su nombre en gris
+  break;
+
+// ── Jugador que vuelve ──────────────────────────────────────────
+case 'playerRejoined':
+  showToast(`${msg.name} ha vuelto 🎉`);
+  markPlayerOnline(msg.id);
+  break;
+
+// ── Jugador que se va definitivamente ──────────────────────────
+case 'playerLeft':
+  showToast(`${msg.name} ha abandonado la partida.`);
+  removePlayerFromList(msg.id);
+  break;
   onConnected();
 }
 
@@ -458,7 +506,15 @@ function setupLobbyUI(){
   document.getElementById('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')handleJoin();});
   document.getElementById('joinCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
 }
-
+ 
+function sendStroke(x0, y0, x1, y1, color, size) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({
+    type:  'draw',      // <-- importante, debe ser "draw"
+    x0, y0, x1, y1,
+    color, size
+  }));
+}
 function handleCreate(){
   const name=document.getElementById('createName').value.trim();
   if(!name){showError('createError','Necesitas un nombre');return;}
