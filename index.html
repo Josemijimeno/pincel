@@ -389,11 +389,23 @@ function sendMsg(type,data){
 function handleMessage(msg) {
   switch(msg.type) {
     case 'room-state':
-      msg.data.players.forEach(p => {
-        if (!players[p.id]) {
-          players[p.id] = { name: p.name, score: 0, guessed: false };
-        }
-      });
+  if(msg.data&&msg.data.players){
+    msg.data.players.forEach(p=>{
+      players[p.id]={name:p.name,score:0,guessed:false};
+    });
+  }
+  updatePlayersGrid();
+  updateScoreList();
+  break;
+case 'player-join':
+  if(msg.from!==myId){
+    players[msg.from]={name:msg.fromName,score:0,guessed:false};
+    updatePlayersGrid();
+    updateScoreList();
+    addChat({type:'system',text:msg.fromName+' se unió.'});
+    if(gameActive&&isDrawing)setTimeout(()=>sendCanvasSync(msg.from),600);
+  }
+  break;);
       updatePlayersGrid();
       updateScoreList();
       break;
@@ -472,9 +484,13 @@ function showError(id,msg){const el=document.getElementById(id);el.textContent=m
 
 function onConnected(){
   players[myId]={name:myName,score:0,guessed:false};
+  // Anunciarnos al resto (el servidor lo manda a todos menos a nosotros)
   const msg={type:'player-join',from:myId,fromName:myName,data:{name:myName,isHost}};
-  if(ws&&ws.readyState===1)ws.send(JSON.stringify(msg));else if(bc)bc.postMessage(msg);
-  showScreen('waiting');setupWaitingRoom();
+  if(ws&&ws.readyState===1)ws.send(JSON.stringify(msg));
+  else if(bc)bc.postMessage(msg);
+  showScreen('waiting');
+  setupWaitingRoom();
+  updatePlayersGrid();
 }
 
 function setupWaitingRoom(){
