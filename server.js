@@ -2,14 +2,36 @@ const http = require('http');
 const WebSocket = require('ws');
 
 // ─── Configuración ───────────────────────────────────────────────────────────
-const MAX_PLAYERS        = 8;      // Límite de jugadores por sala
-const HEARTBEAT_INTERVAL = 30_000; // Ping cada 30 s
-const PING_TIMEOUT       = 10_000; // Tiempo máximo para responder al ping
-const REJOIN_WINDOW      = 60_000; // 60 s para reconectarse antes de perder la partida
-const MAX_CANVAS_STROKES = 500;    // Máximo de trazos guardados en memoria
+const MAX_PLAYERS        = parseInt(process.env.MAX_PLAYERS)  || 8;
+const HEARTBEAT_INTERVAL = parseInt(process.env.HEARTBEAT_MS) || 25_000;
+const PING_TIMEOUT       = 10_000;
+const REJOIN_WINDOW      = parseInt(process.env.REJOIN_MS)    || 60_000;
+const MAX_CANVAS_STROKES = 500;
+const RATE_LIMIT_MAX     = 50;    // mensajes por segundo por cliente
+const RATE_LIMIT_WINDOW  = 1_000;
+const SPAM_MAX           = 10;    // mensajes de chat máximos en SPAM_WINDOW
+const SPAM_WINDOW        = 8_000; // ventana anti-spam en ms
+const EMPTY_ROOM_TTL     = 10 * 60_000;
+
+// ─── Logger estructurado ─────────────────────────────────────────────────────
+const log = {
+  info:  (room, msg) => console.log(`[${new Date().toISOString()}] [INFO]  [${room}] ${msg}`),
+  warn:  (room, msg) => console.warn(`[${new Date().toISOString()}] [WARN]  [${room}] ${msg}`),
+  error: (room, msg) => console.error(`[${new Date().toISOString()}] [ERROR] [${room}] ${msg}`),
+};
 
 // ─── Servidor HTTP ───────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    const stats = Object.entries(rooms).map(([code, r]) => ({
+      code,
+      players: Object.keys(r.players).length,
+      canvas: r.canvas.length,
+    }));
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ status: 'ok', rooms: stats }));
+    return;
+  }
   res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'text/plain' });
   res.end('Pincel WS Server OK');
 });
@@ -17,23 +39,18 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocket.Server({ server });
 
 // ─── Estado global ───────────────────────────────────────────────────────────
-// rooms[code] = {
-//   players:  { [id]: { ws, name, score, lastPing, disconnectedAt } },
-//   canvas:   [ ...strokes ],   ← snapshot de trazos
-//   gameState: { active, round, drawerId, word } | null
-// }
 const rooms = {};
 
 function getRoom(code) {
   if (!rooms[code]) {
-    rooms[code] = { players: {}, canvas: [], gameState: null };
+    rooms[code] = { players: {}, canvas: [], gameState: null, emptyAt: null };
   }
   return rooms[code];
 }
 
-// ─── Utilidades de broadcast ─────────────────────────────────────────────────
+// ─── Utilidades ──────────────────────────────────────────────────────────────
 function send(ws, obj) {
-  if (ws.readyState === WebSocket.OPEN) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
     try { ws.send(JSON.stringify(obj)); } catch (_) {}
   }
 }
@@ -48,176 +65,211 @@ function broadcast(room, obj, excludeId = null) {
   }
 }
 
-// ─── Eliminar jugador de la sala ─────────────────────────────────────────────
+function playerList(room) {
+  return Object.entries(room.players).map(([pid, p]) => ({
+    id: pid, name: p.name, score: p.score, avatar: p.avatar || null,
+    connected: !!(p.ws && p.ws.readyState === WebSocket.OPEN),
+  }));
+}
+
 function removePlayer(roomCode, id, notify = true) {
   const room = rooms[roomCode];
   if (!room) return;
   const p = room.players[id];
   delete room.players[id];
-  if (notify && p) {
-    broadcast(room, { type: 'playerLeft', id, name: p.name });
-  }
+  if (notify && p) broadcast(room, { type: 'playerLeft', id, name: p.name });
   if (Object.keys(room.players).length === 0) {
-    delete rooms[roomCode];
-    console.log(`[${roomCode}] Sala vacía, eliminada.`);
+    room.emptyAt = Date.now();
+    log.info(roomCode, `Sala vacía, marcada para limpieza.`);
   }
+}
+
+// ─── Rate limiting (mensajes totales/segundo) ────────────────────────────────
+function checkRateLimit(p) {
+  const now = Date.now();
+  if (!p.rateWindow || now - p.rateWindow > RATE_LIMIT_WINDOW) {
+    p.rateWindow = now; p.rateCount = 0;
+  }
+  p.rateCount++;
+  return p.rateCount <= RATE_LIMIT_MAX;
+}
+
+// ─── Anti-spam de chat (mensajes de tipo guess/chat) ────────────────────────
+// Devuelve true si está bien, false si hay que expulsar
+function checkSpam(p) {
+  const now = Date.now();
+  if (!p.spamWindow || now - p.spamWindow > SPAM_WINDOW) {
+    p.spamWindow = now; p.spamCount = 0;
+  }
+  p.spamCount++;
+  return p.spamCount <= SPAM_MAX;
 }
 
 // ─── Heartbeat ───────────────────────────────────────────────────────────────
 setInterval(() => {
   for (const [roomCode, room] of Object.entries(rooms)) {
     for (const [id, p] of Object.entries(room.players)) {
-
-      // Jugador en estado "desconectado temporalmente" → esperar ventana de rejoin
       if (!p.ws || p.ws.readyState !== WebSocket.OPEN) {
         if (p.disconnectedAt && Date.now() - p.disconnectedAt > REJOIN_WINDOW) {
-          console.log(`[${roomCode}] Ventana de rejoin expirada para ${p.name} (${id})`);
+          log.warn(roomCode, `Rejoin expirado para ${p.name} (${id})`);
           removePlayer(roomCode, id);
         }
         continue;
       }
-
-      // Timeout de ping sin respuesta
       if (p.lastPing && Date.now() - p.lastPing > HEARTBEAT_INTERVAL + PING_TIMEOUT) {
-        console.log(`[${roomCode}] Timeout de ${p.name} (${id}), cerrando.`);
-        p.ws.terminate();
-        p.ws = null;
-        p.disconnectedAt = Date.now();
+        log.warn(roomCode, `Timeout de ${p.name} (${id}), cerrando.`);
+        p.ws.terminate(); p.ws = null; p.disconnectedAt = Date.now();
         broadcast(room, { type: 'playerDisconnected', id, name: p.name });
         continue;
       }
-
-      // Enviar ping normal
       try { p.ws.ping(); p.lastPing = Date.now(); } catch (_) {}
     }
   }
 }, HEARTBEAT_INTERVAL);
 
+// ─── Limpieza de salas vacías ────────────────────────────────────────────────
+setInterval(() => {
+  for (const [code, room] of Object.entries(rooms)) {
+    if (room.emptyAt && Date.now() - room.emptyAt > EMPTY_ROOM_TTL) {
+      delete rooms[code];
+      log.info(code, `Sala eliminada por inactividad.`);
+    }
+  }
+}, 60_000);
+
 // ─── Conexión WebSocket ──────────────────────────────────────────────────────
 wss.on('connection', (ws, req) => {
   let roomCode, id, name;
-
   try {
     const params = new URL(req.url, 'http://localhost').searchParams;
     roomCode = params.get('room') || 'default';
     id       = params.get('id')   || `anon_${Date.now()}`;
     name     = params.get('name') || 'Jugador';
   } catch (err) {
-    console.error('URL inválida:', err.message);
-    ws.close();
-    return;
+    log.error('?', `URL inválida: ${err.message}`);
+    ws.close(); return;
   }
 
   const room = getRoom(roomCode);
+  room.emptyAt = null;
   const existingPlayer = room.players[id];
 
-  // ── REJOIN: el jugador ya existía (se cayó y vuelve) ──────────────────────
+  // ── REJOIN ────────────────────────────────────────────────────────────────
   if (existingPlayer) {
     existingPlayer.ws = ws;
     existingPlayer.disconnectedAt = null;
     existingPlayer.lastPing = null;
-    console.log(`[${roomCode}] 🔄 REJOIN de ${name} (${id}). Puntos recuperados: ${existingPlayer.score}`);
-
-    // Confirmar rejoin con su estado guardado
-    send(ws, {
-      type: 'rejoinOk',
-      score: existingPlayer.score,
-      gameState: room.gameState,
-      players: Object.entries(room.players).map(([pid, p]) => ({
-        id: pid, name: p.name, score: p.score,
-        connected: p.ws && p.ws.readyState === WebSocket.OPEN
-      }))
-    });
-
-    // Mandar snapshot del canvas
-    if (room.canvas.length > 0) {
-      send(ws, { type: 'canvasSnapshot', strokes: room.canvas });
-    }
-
-    // Avisar a los demás
+    log.info(roomCode, `REJOIN de ${name} (${id}). Puntos: ${existingPlayer.score}`);
+    send(ws, { type: 'rejoinOk', score: existingPlayer.score, gameState: room.gameState, players: playerList(room) });
+    if (room.canvas.length > 0) send(ws, { type: 'canvasSnapshot', strokes: room.canvas });
     broadcast(room, { type: 'playerRejoined', id, name }, id);
-
-    attachHandlers(ws, ws, roomCode, id, name, room);
+    attachHandlers(ws, roomCode, id, name, room);
     return;
   }
 
   // ── NUEVA CONEXIÓN ────────────────────────────────────────────────────────
-
-  // Límite de jugadores
   const activePlayers = Object.keys(room.players).length;
   if (activePlayers >= MAX_PLAYERS) {
-    console.log(`[${roomCode}] Sala llena (${MAX_PLAYERS}), rechazando a ${name}`);
+    log.warn(roomCode, `Sala llena, rechazando a ${name}`);
     send(ws, { type: 'roomFull', max: MAX_PLAYERS });
-    ws.close();
-    return;
+    ws.close(); return;
   }
 
-  // Registrar jugador nuevo
-  room.players[id] = { ws, name, score: 0, lastPing: null, disconnectedAt: null };
-  console.log(`[${roomCode}] ✅ ${name} (${id}) conectado. Jugadores: ${activePlayers + 1}/${MAX_PLAYERS}`);
+  room.players[id] = {
+    ws, name, score: 0, avatar: null,
+    lastPing: null, disconnectedAt: null,
+    rateWindow: null, rateCount: 0,
+    spamWindow: null, spamCount: 0,
+  };
 
-  // Enviar estado inicial: lista de jugadores actuales
-  send(ws, {
-    type: 'welcome',
-    id,
-    players: Object.entries(room.players).map(([pid, p]) => ({
-      id: pid, name: p.name, score: p.score,
-      connected: p.ws && p.ws.readyState === WebSocket.OPEN
-    }))
-  });
-
-  // Enviar snapshot del canvas si hay trazos
-  if (room.canvas.length > 0) {
-    send(ws, { type: 'canvasSnapshot', strokes: room.canvas });
-  }
-
-  // Avisar al resto
+  log.info(roomCode, `NUEVO ${name} (${id}). Jugadores: ${activePlayers + 1}/${MAX_PLAYERS}`);
+  send(ws, { type: 'welcome', id, players: playerList(room) });
+  if (room.canvas.length > 0) send(ws, { type: 'canvasSnapshot', strokes: room.canvas });
   broadcast(room, { type: 'playerJoined', id, name }, id);
-
-  attachHandlers(ws, ws, roomCode, id, name, room);
+  attachHandlers(ws, roomCode, id, name, room);
 });
 
-// ─── Handlers de mensajes / desconexión ─────────────────────────────────────
-function attachHandlers(ws, _ws, roomCode, id, name, room) {
+// ─── Handlers ────────────────────────────────────────────────────────────────
+function attachHandlers(ws, roomCode, id, name, room) {
 
   ws.on('pong', () => {
     if (room.players[id]) room.players[id].lastPing = null;
   });
 
   ws.on('message', (data) => {
+    const p = room.players[id];
+    if (!p) return;
+
+    // Rate limiting global
+    if (!checkRateLimit(p)) {
+      log.warn(roomCode, `Rate limit superado por ${name} (${id})`);
+      return;
+    }
+
     let msg;
     try { msg = JSON.parse(data.toString()); }
     catch { return; }
 
-    msg.id = id; // El id siempre viene del servidor, no del cliente
+    msg.id = id;
+    msg.fromName = name;
 
     switch (msg.type) {
 
-      // Trazo de dibujo → guardar en canvas + broadcast
+      case 'player-join': {
+        if (msg.data?.avatar) p.avatar = msg.data.avatar;
+        broadcast(room, { ...msg, data: { ...msg.data, avatar: p.avatar } }, id);
+        break;
+      }
+
       case 'draw': {
         room.canvas.push(msg);
-        if (room.canvas.length > MAX_CANVAS_STROKES) {
-          room.canvas = room.canvas.slice(-MAX_CANVAS_STROKES);
-        }
+        if (room.canvas.length > MAX_CANVAS_STROKES) room.canvas = room.canvas.slice(-MAX_CANVAS_STROKES);
         broadcast(room, msg, id);
         break;
       }
 
-      // Limpiar canvas
+      case 'clear':
       case 'clearCanvas': {
         room.canvas = [];
         broadcast(room, msg);
         break;
       }
 
-      // Actualización del estado de partida (lo manda el host)
+      case 'game-start': {
+        room.canvas = [];
+        room.gameState = { active: true, round: msg.data?.roundNumber || 1 };
+        broadcast(room, msg);
+        break;
+      }
+
+      case 'game-end': {
+        room.gameState = null;
+        broadcast(room, msg);
+        break;
+      }
+
       case 'gameState': {
         room.gameState = msg.state || null;
         broadcast(room, msg, id);
         break;
       }
 
-      // Mensaje directo a un jugador concreto (ej. datos privados)
+      // ── Anti-spam: solo aplica a mensajes de chat/adivinanza ─────────────
+      case 'guess': {
+        if (!checkSpam(p)) {
+          log.warn(roomCode, `SPAM detectado de ${name} (${id}), expulsando.`);
+          send(ws, {
+            type: 'kicked',
+            reason: 'Has sido expulsado por enviar demasiados mensajes seguidos.'
+          });
+          ws.close();
+          removePlayer(roomCode, id);
+          return;
+        }
+        broadcast(room, msg);
+        break;
+      }
+
       case 'direct': {
         const target = room.players[msg.to];
         if (target?.ws?.readyState === WebSocket.OPEN) {
@@ -226,12 +278,10 @@ function attachHandlers(ws, _ws, roomCode, id, name, room) {
         break;
       }
 
-      // Keepalive manual desde el cliente
       case 'ping':
         send(ws, { type: 'pong' });
         break;
 
-      // Resto de mensajes (chat, guess, score, etc.) → broadcast completo
       default:
         broadcast(room, msg);
         break;
@@ -239,33 +289,43 @@ function attachHandlers(ws, _ws, roomCode, id, name, room) {
   });
 
   ws.on('close', (code) => {
-    console.log(`[${roomCode}] ⏸ ${name} (${id}) desconectado. Código: ${code}`);
+    log.info(roomCode, `DESCONEXIÓN ${name} (${id}). Código: ${code}`);
     const p = room.players[id];
-    if (p) {
-      p.ws = null;
-      p.disconnectedAt = Date.now();
-      // Avisar que está temporalmente fuera (no eliminado aún)
-      broadcast(room, { type: 'playerDisconnected', id, name });
-    }
+    if (p) { p.ws = null; p.disconnectedAt = Date.now(); broadcast(room, { type: 'playerDisconnected', id, name }); }
   });
 
   ws.on('error', (err) => {
-    console.error(`[${roomCode}] Error socket ${id}:`, err.message);
+    log.error(roomCode, `Error socket ${name} (${id}): ${err.message}`);
     try { ws.terminate(); } catch (_) {}
     const p = room.players[id];
-    if (p) {
-      p.ws = null;
-      p.disconnectedAt = Date.now();
-      broadcast(room, { type: 'playerDisconnected', id, name });
-    }
+    if (p) { p.ws = null; p.disconnectedAt = Date.now(); broadcast(room, { type: 'playerDisconnected', id, name }); }
   });
 }
+
+// ─── Graceful shutdown ───────────────────────────────────────────────────────
+function shutdown(signal) {
+  log.info('SERVER', `${signal} recibido, cerrando conexiones...`);
+  for (const room of Object.values(rooms)) {
+    for (const p of Object.values(room.players)) {
+      if (p.ws && p.ws.readyState === WebSocket.OPEN) {
+        try {
+          p.ws.send(JSON.stringify({ type: 'serverRestart', msg: 'El servidor se reinicia, reconecta en unos segundos.' }));
+          p.ws.close();
+        } catch (_) {}
+      }
+    }
+  }
+  server.close(() => { log.info('SERVER', 'Servidor cerrado limpiamente.'); process.exit(0); });
+  setTimeout(() => process.exit(1), 5000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('uncaughtException',  (err)    => log.error('SERVER', `uncaughtException: ${err.message}`));
+process.on('unhandledRejection', (reason) => log.error('SERVER', `unhandledRejection: ${reason}`));
 
 // ─── Arranque ────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🎨 Servidor Pincel en puerto ${PORT} | Límite: ${MAX_PLAYERS} jugadores/sala | Rejoin: ${REJOIN_WINDOW / 1000}s`);
+  log.info('SERVER', `🎨 Pincel en puerto ${PORT} | MAX=${MAX_PLAYERS} jugadores | REJOIN=${REJOIN_WINDOW/1000}s | RATE=${RATE_LIMIT_MAX}msg/s | SPAM=max ${SPAM_MAX} mensajes/${SPAM_WINDOW/1000}s`);
 });
-
-process.on('uncaughtException',  (err)    => console.error('uncaughtException:', err.message));
-process.on('unhandledRejection', (reason) => console.error('unhandledRejection:', reason));
