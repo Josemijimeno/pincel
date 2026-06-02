@@ -648,7 +648,7 @@ function onGuess(msg){
     }
   }else{
     const close=isClose(norm(text),norm(currentWord||''));
-    if(senderId!==myId||isDrawing)addChat({type:close?'close':'chat',name:senderName,text});
+    addChat({type:close?'close':'chat',name:senderName,text});
   }
 }
 
