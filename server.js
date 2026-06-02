@@ -13,52 +13,67 @@ wss.on('connection', (ws, req) => {
   const params = new URL(req.url, 'http://localhost').searchParams;
   const room = params.get('room');
   const id = params.get('id');
-  const name = params.get('name') || 'Jugador';
 
   if (!rooms[room]) rooms[room] = {};
   rooms[room][id] = ws;
 
-  console.log(`[${room}] ${name} conectado. Jugadores: ${Object.keys(rooms[room]).length}`);
+  // Enviar a este jugador la lista de jugadores ya conectados
+  const existingPlayers = Object.keys(rooms[room])
+    .filter(pid => pid !== id)
+    .map(pid => rooms[room][pid].playerName || 'Jugador');
 
-  // Notificar a todos que alguien entró
-  broadcast(room, JSON.stringify({
-    type: 'player-join',
-    from: id,
-    fromName: decodeURIComponent(name),
-    data: { name: decodeURIComponent(name) }
+  ws.send(JSON.stringify({
+    type: 'room-state',
+    data: { players: Object.entries(rooms[room])
+      .filter(([pid]) => pid !== id)
+      .map(([pid, client]) => ({ id: pid, name: client.playerName || 'Jugador' }))
+    }
   }));
 
   ws.on('message', (data) => {
-    // Retransmitir a TODOS en la sala incluyendo al emisor
-    broadcastAll(room, data.toString());
+    const msg = data.toString();
+    try {
+      const parsed = JSON.parse(msg);
+      // Guardar nombre del jugador
+      if (parsed.type === 'player-join') {
+        ws.playerName = parsed.fromName;
+        ws.playerId = parsed.from;
+        // Reenviar SOLO a los demás, no al emisor
+        Object.entries(rooms[room]).forEach(([pid, client]) => {
+          if (pid !== id && client.readyState === WebSocket.OPEN) {
+            client.send(msg);
+          }
+        });
+      } else {
+        // Todo lo demás se manda a todos incluido el emisor
+        Object.values(rooms[room]).forEach(client => {
+          if (client.readyState === WebSocket.OPEN) client.send(msg);
+        });
+      }
+    } catch(e) {
+      Object.values(rooms[room]).forEach(client => {
+        if (client.readyState === WebSocket.OPEN) client.send(msg);
+      });
+    }
   });
 
   ws.on('close', () => {
-    broadcast(room, JSON.stringify({
-      type: 'player-leave',
-      from: id,
-      fromName: decodeURIComponent(name),
-      data: {}
-    }));
-    if (rooms[room]) {
-      delete rooms[room][id];
-      if (Object.keys(rooms[room]).length === 0) delete rooms[room];
-    }
-    console.log(`[${room}] ${name} desconectado.`);
+    const name = ws.playerName || 'Jugador';
+    delete rooms[room][id];
+    if (Object.keys(rooms[room]).length === 0) delete rooms[room];
+    // Notificar a los demás
+    Object.values(rooms[room] || {}).forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'player-leave',
+          from: id,
+          fromName: name,
+          data: {}
+        }));
+      }
+    });
   });
 });
-
-function broadcast(room, msg) {
-  Object.values(rooms[room] || {}).forEach(client => {
-    if (client.readyState === WebSocket.OPEN) client.send(msg);
-  });
-}
-
-function broadcastAll(room, msg) {
-  Object.values(rooms[room] || {}).forEach(client => {
-    if (client.readyState === WebSocket.OPEN) client.send(msg);
-  });
-}
 
 server.listen(process.env.PORT || 3000, () => {
   console.log('Servidor Pincel corriendo');
