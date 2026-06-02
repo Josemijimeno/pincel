@@ -625,7 +625,18 @@ function setTool(t){currentTool=t;document.getElementById('toolPen').classList.t
 
 function setupChat(){
   const input=document.getElementById('chatInput');
-  const send=()=>{const text=input.value.trim();if(!text||isDrawing)return;input.value='';sendMsg('guess',{senderId:myId,senderName:myName,text});};
+  const send=()=>{
+    const text=input.value.trim();
+    if(!text||isDrawing)return;
+    input.value='';
+    // Mostrar inmediatamente en mi propio chat
+    addChat({type:'chat',name:myName,text});
+    // Enviar al servidor para que lo distribuya a los demás
+    const msg={type:'guess',data:{senderId:myId,senderName:myName,text},from:myId,fromName:myName};
+    const str=JSON.stringify(msg);
+    if(ws&&ws.readyState===1)ws.send(str);
+    else if(bc)bc.postMessage(msg);
+  };
   input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
   document.getElementById('sendBtn').addEventListener('click',send);
 }
@@ -633,6 +644,7 @@ function setupChat(){
 function onGuess(msg){
   if(!gameActive)return;
   const{senderId,senderName,text}=msg.data;
+  if(senderId===myId)return; // Ya lo mostramos al enviar
   const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   if(currentWord&&norm(text)===norm(currentWord)){
     if(players[senderId]&&!players[senderId].guessed){
@@ -651,7 +663,6 @@ function onGuess(msg){
     addChat({type:close?'close':'chat',name:senderName,text});
   }
 }
-
 function isClose(a,b){if(!b||Math.abs(a.length-b.length)>3)return false;let d=0;for(let i=0;i<Math.max(a.length,b.length);i++)if(a[i]!==b[i])d++;return d<=2;}
 
 function addChat(msg){
