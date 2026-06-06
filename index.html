@@ -155,6 +155,16 @@
   .skin-opt{border-radius:50%;}
   .av-opt.active.skin-opt{box-shadow:0 0 0 3px var(--accent);}
   .mini-avatar-svg{flex-shrink:0;display:inline-block;}
+  /* ── Panel configuración lobby ── */
+  .config-grid{display:flex;flex-direction:column;gap:0;margin-bottom:14px;border:2px solid var(--ink);}
+  .config-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(15,14,12,.12);}
+  .config-row:last-child{border-bottom:none;}
+  .config-icon{font-size:18px;width:24px;text-align:center;flex-shrink:0;}
+  .config-label{flex:1;font-family:var(--mono);font-size:12px;letter-spacing:1px;}
+  .config-select{width:140px;padding:6px 10px;border:2px solid var(--ink);background:var(--paper);font-family:var(--mono);font-size:13px;color:var(--ink);outline:none;flex-shrink:0;}
+  .config-select:focus{border-color:var(--accent);}
+  /* ── Herramientas extra toolbar ── */
+  .tool-btn.active-fill{background:#e8a81e;color:var(--ink);border-color:#e8a81e;}
   ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(15,14,12,.2);}
   @media(max-width:700px){
     .game-body{grid-template-columns:1fr;grid-template-rows:1fr 180px;}
@@ -180,9 +190,32 @@
     </div>
     <div id="tab-create">
       <div class="field-group"><label>Tu nombre</label><input type="text" id="createName" placeholder="Ej: Picasso" maxlength="16" autocomplete="off"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div class="field-group"><label>Rondas</label><select id="createRounds"><option value="3">3 rondas</option><option value="5" selected>5 rondas</option><option value="7">7 rondas</option><option value="10">10 rondas</option></select></div>
-        <div class="field-group"><label>Tiempo</label><select id="createTime"><option value="60">60 seg</option><option value="90" selected>90 seg</option><option value="120">120 seg</option></select></div>
+      <div class="config-grid">
+        <div class="config-row">
+          <div class="config-icon">👥</div>
+          <div class="config-label">Jugadores</div>
+          <select id="createPlayers" class="config-select"><option value="2">2</option><option value="4">4</option><option value="6">6</option><option value="8" selected>8</option></select>
+        </div>
+        <div class="config-row">
+          <div class="config-icon">⏱️</div>
+          <div class="config-label">Tiempo dibujo</div>
+          <select id="createTime" class="config-select"><option value="60">60 seg</option><option value="80">80 seg</option><option value="90" selected>90 seg</option><option value="120">120 seg</option><option value="150">150 seg</option></select>
+        </div>
+        <div class="config-row">
+          <div class="config-icon">🔄</div>
+          <div class="config-label">Rondas</div>
+          <select id="createRounds" class="config-select"><option value="2">2</option><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="10">10</option></select>
+        </div>
+        <div class="config-row">
+          <div class="config-icon">📝</div>
+          <div class="config-label">Opciones de palabra</div>
+          <select id="createWordCount" class="config-select"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
+        </div>
+        <div class="config-row">
+          <div class="config-icon">💡</div>
+          <div class="config-label">Pistas</div>
+          <select id="createHints" class="config-select"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+        </div>
       </div>
       <div class="section-title">🎨 Temáticas de palabras</div>
       <div style="font-family:var(--mono);font-size:11px;opacity:.5;margin-bottom:10px;">Selecciona una o varias. Sin selección = todas mezcladas.</div>
@@ -357,6 +390,10 @@
         <div class="toolbar-sep"></div>
         <button class="tool-btn active" id="toolPen">✏ Pluma</button>
         <button class="tool-btn" id="toolEraser">⌫ Borrar</button>
+        <button class="tool-btn" id="toolFill">🪣 Relleno</button>
+        <button class="tool-btn" id="toolLine">╱ Línea</button>
+        <button class="tool-btn" id="toolRect">▭ Rect</button>
+        <button class="tool-btn" id="toolCircle">◯ Círculo</button>
         <button class="tool-btn" id="toolClear">🗑 Limpiar</button>
       </div>
     </div>
@@ -556,11 +593,20 @@ let canvas,ctx,drawing=false,lastX=0,lastY=0;
 let currentColor='#0f0e0c',currentSize=3,currentTool='pen';
 let strokeBatch=[],batchTimer=null;
 let guessOrder=0,painterPointsThisTurn=0,maxGuesserPoints=0;
+// ── Configuración extra ───────────────────────────────────────
+let wordChoiceCount=3;   // cuántas palabras ofrece el modal
+let maxHintsOverride=-1; // -1 = automático según longitud
+// ── Herramientas de dibujo ────────────────────────────────────
+let shapeStart=null;     // punto inicial para línea/rect/círculo
+let shapeSnapshot=null;  // snapshot del canvas antes de dibujar forma
 // ── NUEVO: sistema de pistas ──────────────────────────────────
 let hintInterval=null,revealedIndices=new Set(),hintMasked=[];
 
 // ── Calcular número de pistas según longitud de palabra ───────
 function calcMaxHints(word){
+  // Si el host configuró un número fijo de pistas, usarlo
+  if(maxHintsOverride>=0)return maxHintsOverride;
+  // Si no, automático según longitud
   const letters=word.replace(/ /g,'').length;
   if(letters<=4)return 1;
   if(letters<=8)return 2;
@@ -622,6 +668,8 @@ function handleMessage(msg){
     case 'word-options': if(msg.data.for===myId)showWordModal(msg.data.words);break;
     case 'word-chosen':  onWordChosen(msg.data);break;
     case 'draw':         if(msg.from!==myId)onRemoteDraw(msg.data);break;
+    case 'shape':        if(msg.from!==myId)onRemoteShape(msg.data);break;
+    case 'fill':         if(msg.from!==myId)onRemoteFill(msg.data);break;
     case 'clear':        if(msg.from!==myId)clearCanvas();break;
     case 'guess':        onGuess(msg);break;
     case 'turn-end':     onTurnEnd(msg.data);break;
@@ -758,6 +806,8 @@ function handleCreate(){
   if(!name){showError('createError','Necesitas un nombre');return;}
   totalRounds=parseInt(document.getElementById('createRounds').value);
   turnTime=parseInt(document.getElementById('createTime').value);
+  wordChoiceCount=parseInt(document.getElementById('createWordCount')?.value||3);
+  maxHintsOverride=parseInt(document.getElementById('createHints')?.value??-1);
   activeWordPool=buildWordPool();
   if(activeWordPool.length<5){showError('createError','Añade al menos 5 palabras');return;}
   myName=name;isHost=true;myId='p_'+Math.random().toString(36).slice(2,9);
@@ -806,12 +856,14 @@ function startGame(){
   turnOrder=Object.keys(players);shuffle(turnOrder);
   Object.keys(players).forEach(id=>{players[id].score=0;});
   usedWords=[];
-  sendMsg('game-start',{turnOrder,totalRounds,turnTime,roundNumber:1,wordPool:activeWordPool});
+  sendMsg('game-start',{turnOrder,totalRounds,turnTime,roundNumber:1,wordPool:activeWordPool,wordChoiceCount,maxHintsOverride});
 }
 function onGameStart(data){
   turnOrder=data.turnOrder;totalRounds=data.totalRounds;turnTime=data.turnTime;
   roundNumber=data.roundNumber;turnIndex=0;
   if(data.wordPool)activeWordPool=data.wordPool;
+  if(data.wordChoiceCount)wordChoiceCount=data.wordChoiceCount;
+  if(data.maxHintsOverride!==undefined)maxHintsOverride=data.maxHintsOverride;
   usedWords=[];Object.keys(players).forEach(id=>{players[id].score=0;players[id].guessed=false;});
   gameActive=true;showScreen('game');resizeCanvas();updateScoreList();updateRoundInfo();startTurn();
 }
@@ -870,29 +922,176 @@ function resizeCanvas(){
   if(img)ctx.putImageData(img,0,0);
 }
 function getPos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
-function startDraw(e){if(!isDrawing)return;e.preventDefault();drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;ctx.beginPath();ctx.arc(p.x,p.y,(currentTool==='eraser'?currentSize*2:currentSize)/2,0,Math.PI*2);ctx.fillStyle=currentTool==='eraser'?'#fffef9':currentColor;ctx.fill();}
-function doDraw(e){
-  if(!drawing||!isDrawing)return;e.preventDefault();const p=getPos(e);
-  const color=currentTool==='eraser'?'#fffef9':currentColor;
-  const size=currentTool==='eraser'?currentSize*2:currentSize;
-  ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);
-  ctx.strokeStyle=color;ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
-  strokeBatch.push({x1:lastX,y1:lastY,x2:p.x,y2:p.y,color,size});
+function startDraw(e){
+  if(!isDrawing)return;
+  e.preventDefault();
+  const p=getPos(e);
+  if(currentTool==='fill'){
+    // Flood fill inmediato al hacer click
+    floodFill(Math.round(p.x),Math.round(p.y),currentColor);
+    // Enviar acción de relleno
+    const msg={type:'fill',from:myId,data:{x:Math.round(p.x),y:Math.round(p.y),color:currentColor}};
+    if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));
+    return;
+  }
+  drawing=true;
   lastX=p.x;lastY=p.y;
-  if(!batchTimer)batchTimer=setTimeout(flushBatch,30);
+  if(currentTool==='pen'||currentTool==='eraser'){
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,(currentTool==='eraser'?currentSize*2:currentSize)/2,0,Math.PI*2);
+    ctx.fillStyle=currentTool==='eraser'?'#fffef9':currentColor;
+    ctx.fill();
+  } else {
+    // Para formas: guardar snapshot del canvas
+    shapeStart={x:p.x,y:p.y};
+    shapeSnapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
+  }
 }
-function stopDraw(){if(!drawing)return;drawing=false;flushBatch();}
+
+function doDraw(e){
+  if(!drawing||!isDrawing)return;
+  e.preventDefault();
+  const p=getPos(e);
+  if(currentTool==='pen'||currentTool==='eraser'){
+    const color=currentTool==='eraser'?'#fffef9':currentColor;
+    const size=currentTool==='eraser'?currentSize*2:currentSize;
+    ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle=color;ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+    strokeBatch.push({x1:lastX,y1:lastY,x2:p.x,y2:p.y,color,size});
+    lastX=p.x;lastY=p.y;
+    if(!batchTimer)batchTimer=setTimeout(flushBatch,30);
+  } else if(shapeStart&&shapeSnapshot){
+    // Restaurar snapshot y dibujar forma en preview
+    ctx.putImageData(shapeSnapshot,0,0);
+    drawShape(currentTool,shapeStart.x,shapeStart.y,p.x,p.y,currentColor,currentSize,false);
+  }
+}
+
+function stopDraw(e){
+  if(!drawing)return;
+  drawing=false;
+  if(currentTool==='pen'||currentTool==='eraser'){
+    flushBatch();
+  } else if(shapeStart&&e){
+    const p=getPos(e);
+    if(shapeSnapshot)ctx.putImageData(shapeSnapshot,0,0);
+    drawShape(currentTool,shapeStart.x,shapeStart.y,p.x,p.y,currentColor,currentSize,false);
+    // Enviar forma al servidor
+    const msg={type:'shape',from:myId,data:{
+      shape:currentTool,
+      x1:shapeStart.x,y1:shapeStart.y,
+      x2:p.x,y2:p.y,
+      color:currentColor,size:currentSize
+    }};
+    if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));
+    shapeStart=null;shapeSnapshot=null;
+  }
+}
+
+// ── Dibujar forma (línea, rect, círculo) ──────────────────────
+function drawShape(type,x1,y1,x2,y2,color,size,remote){
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=size;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  if(type==='line'){
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  } else if(type==='rect'){
+    ctx.beginPath();ctx.strokeRect(x1,y1,x2-x1,y2-y1);
+  } else if(type==='circle'){
+    const rx=Math.abs(x2-x1)/2,ry=Math.abs(y2-y1)/2;
+    const cx=(x1+x2)/2,cy=(y1+y2)/2;
+    ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();
+  }
+}
+
+// ── Flood Fill (cubo de relleno) ──────────────────────────────
+function floodFill(startX,startY,fillColorHex){
+  const imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const data=imgData.data;
+  const w=canvas.width,h=canvas.height;
+
+  // Color destino (el que está en el pixel clickado)
+  const idx=(startY*w+startX)*4;
+  const targetR=data[idx],targetG=data[idx+1],targetB=data[idx+2],targetA=data[idx+3];
+
+  // Color de relleno
+  const fc=hexToRgb(fillColorHex);
+  if(!fc)return;
+
+  // Si el color destino ya es el color de relleno, no hacer nada
+  if(targetR===fc.r&&targetG===fc.g&&targetB===fc.b&&targetA===255)return;
+
+  const stack=[[startX,startY]];
+  const visited=new Uint8Array(w*h);
+
+  function match(i){
+    return Math.abs(data[i]-targetR)<15&&
+           Math.abs(data[i+1]-targetG)<15&&
+           Math.abs(data[i+2]-targetB)<15&&
+           Math.abs(data[i+3]-targetA)<15;
+  }
+
+  while(stack.length){
+    const [x,y]=stack.pop();
+    if(x<0||x>=w||y<0||y>=h)continue;
+    const i=(y*w+x)*4;
+    if(visited[y*w+x])continue;
+    if(!match(i))continue;
+    visited[y*w+x]=1;
+    data[i]=fc.r;data[i+1]=fc.g;data[i+2]=fc.b;data[i+3]=255;
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  ctx.putImageData(imgData,0,0);
+}
+
+function hexToRgb(hex){
+  hex=hex.replace('#','');
+  if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
+  const n=parseInt(hex,16);
+  return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
 function flushBatch(){if(!strokeBatch.length)return;const s=[...strokeBatch];strokeBatch=[];batchTimer=null;const msg={type:'draw',from:myId,data:{strokes:s}};if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));}
 function onRemoteDraw(data){data.strokes.forEach(s=>{ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();});}
+function onRemoteShape(data){drawShape(data.shape,data.x1,data.y1,data.x2,data.y2,data.color,data.size,true);}
+function onRemoteFill(data){floodFill(data.x,data.y,data.color);}
 function clearCanvas(){ctx.fillStyle='#fffef9';ctx.fillRect(0,0,canvas.width,canvas.height);}
 function setupToolbar(){
-  document.querySelectorAll('.color-swatch').forEach(sw=>sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');currentColor=sw.dataset.color;if(currentTool==='eraser')setTool('pen');}));
-  document.querySelectorAll('.size-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentSize=parseInt(btn.dataset.size);}));
+  document.querySelectorAll('.color-swatch').forEach(sw=>sw.addEventListener('click',()=>{
+    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');currentColor=sw.dataset.color;
+    if(currentTool==='eraser')setTool('pen');
+  }));
+  document.querySelectorAll('.size-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');currentSize=parseInt(btn.dataset.size);
+  }));
   document.getElementById('toolPen').addEventListener('click',()=>setTool('pen'));
   document.getElementById('toolEraser').addEventListener('click',()=>setTool('eraser'));
-  document.getElementById('toolClear').addEventListener('click',()=>{if(!isDrawing)return;clearCanvas();const msg={type:'clear',from:myId,data:{}};if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));});
+  document.getElementById('toolFill').addEventListener('click',()=>setTool('fill'));
+  document.getElementById('toolLine').addEventListener('click',()=>setTool('line'));
+  document.getElementById('toolRect').addEventListener('click',()=>setTool('rect'));
+  document.getElementById('toolCircle').addEventListener('click',()=>setTool('circle'));
+  document.getElementById('toolClear').addEventListener('click',()=>{
+    if(!isDrawing)return;
+    clearCanvas();
+    const msg={type:'clear',from:myId,data:{}};
+    if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));
+  });
 }
-function setTool(t){currentTool=t;document.getElementById('toolPen').classList.toggle('active',t==='pen');document.getElementById('toolEraser').classList.toggle('active',t==='eraser');}
+function setTool(t){
+  currentTool=t;
+  const tools=['pen','eraser','fill','line','rect','circle'];
+  const ids={pen:'toolPen',eraser:'toolEraser',fill:'toolFill',line:'toolLine',rect:'toolRect',circle:'toolCircle'};
+  tools.forEach(tool=>{
+    const el=document.getElementById(ids[tool]);
+    if(el)el.classList.toggle('active',tool===t);
+  });
+  // Cursor según herramienta
+  const cursors={pen:'crosshair',eraser:'cell',fill:'copy',line:'crosshair',rect:'crosshair',circle:'crosshair'};
+  canvas.style.cursor=isDrawing?(cursors[t]||'crosshair'):'default';
+}
 
 // ── setupChat: NO mostrar mensaje si es la respuesta correcta ──
 function setupChat(){
@@ -1011,7 +1210,13 @@ function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classL
 function showToast(msg,ms=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
 function san(s){return String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function maskWord(w){return w.split('').map(c=>c===' '?'  ':'_').join(' ');}
-function pickWords(n){const pool=activeWordPool.length>0?activeWordPool:Object.values(THEMES).flatMap(t=>t.words);const available=pool.filter(w=>!usedWords.includes(w));const source=available.length>=n?available:pool;const copy=[...source];shuffle(copy);return copy.slice(0,n);}
+function pickWords(n){
+  n=n||wordChoiceCount||3;
+  const pool=activeWordPool.length>0?activeWordPool:Object.values(THEMES).flatMap(t=>t.words);
+  const available=pool.filter(w=>!usedWords.includes(w));
+  const source=available.length>=n?available:pool;
+  const copy=[...source];shuffle(copy);return copy.slice(0,n);
+}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
 function launchConfetti(){
   const c=document.getElementById('confettiCanvas');c.width=window.innerWidth;c.height=window.innerHeight;
