@@ -187,6 +187,7 @@
     <div class="tabs">
       <div class="tab active" data-tab="create">Crear sala</div>
       <div class="tab" data-tab="join">Unirse</div>
+      <div class="tab" data-tab="public">🌍 Público</div>
     </div>
     <div id="tab-create">
       <div class="field-group"><label>Tu nombre</label><input type="text" id="createName" placeholder="Ej: Picasso" maxlength="16" autocomplete="off"></div>
@@ -235,6 +236,16 @@
       <div class="field-group"><label>Código de sala</label><input type="text" id="joinCode" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:20px" autocomplete="off"></div>
       <div class="error-msg" id="joinError"></div>
       <button class="btn btn-blue" id="btnJoin">Unirse →</button>
+    </div>
+    <div id="tab-public" style="display:none">
+      <div class="field-group"><label>Tu nombre</label><input type="text" id="publicName" placeholder="Ej: Monet" maxlength="16" autocomplete="off"></div>
+      <div style="text-align:center;padding:16px 0 8px;">
+        <div style="font-size:40px;margin-bottom:8px;">🌍</div>
+        <div style="font-family:var(--mono);font-size:12px;opacity:.6;line-height:1.8;">Entra en una sala pública con jugadores de todo el mundo.<br>Si no hay nadie, crearemos una y esperaremos.</div>
+      </div>
+      <div id="publicStatus" style="font-family:var(--mono);font-size:12px;color:var(--success);text-align:center;min-height:20px;margin-bottom:8px;"></div>
+      <div class="error-msg" id="publicError"></div>
+      <button class="btn btn-primary" id="btnPublic">🌍 Jugar con desconocidos →</button>
     </div>
   </div>
 </div>
@@ -794,12 +805,19 @@ window.addEventListener('DOMContentLoaded',()=>{
   });
 });
 function setupLobbyUI(){
-  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-create').style.display=t.dataset.tab==='create'?'block':'none';document.getElementById('tab-join').style.display=t.dataset.tab==='join'?'block':'none';}));
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-create').style.display=t.dataset.tab==='create'?'block':'none';
+    document.getElementById('tab-join').style.display=t.dataset.tab==='join'?'block':'none';
+    document.getElementById('tab-public').style.display=t.dataset.tab==='public'?'block':'none';
+  }));
   document.getElementById('btnCreate').addEventListener('click',handleCreate);
   document.getElementById('btnJoin').addEventListener('click',handleJoin);
+  document.getElementById('btnPublic').addEventListener('click',handlePublic);
   document.getElementById('createName').addEventListener('keydown',e=>{if(e.key==='Enter')handleCreate();});
   document.getElementById('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')handleJoin();});
-  document.getElementById('joinCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
+  document.getElementById('publicName').addEventListener('keydown',e=>{if(e.key==='Enter')handlePublic();});
 }
 function handleCreate(){
   const name=document.getElementById('createName').value.trim();
@@ -822,6 +840,52 @@ function handleJoin(){
   myName=name;isHost=false;myId='p_'+Math.random().toString(36).slice(2,9);
   roomCode=code;players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
   connectWS();showScreen('avatar');setupAvatarEditor();
+}
+
+// ── Modo público: pedir sala al servidor ──────────────────────
+function handlePublic(){
+  const name=document.getElementById('publicName').value.trim();
+  if(!name){showError('publicError','Necesitas un nombre');return;}
+  myName=name;isHost=false;myId='p_'+Math.random().toString(36).slice(2,9);
+  document.getElementById('publicStatus').textContent='Buscando sala pública…';
+  document.getElementById('btnPublic').disabled=true;
+
+  // Conectar al servidor con room='PUBLIC' para que el servidor asigne sala
+  const params=new URLSearchParams({room:'PUBLIC',id:myId,name:myName,public:'1'});
+  ws=new WebSocket(`${WS_URL}?${params}`);
+
+  ws.onopen=()=>{
+    setStatus('🟢 Conectado','var(--ink)');
+    document.getElementById('publicStatus').textContent='Conectado, buscando sala…';
+  };
+  ws.onclose=()=>{
+    setStatus('🔴 Reconectando…','#c0392b');
+    document.getElementById('btnPublic').disabled=false;
+  };
+  ws.onerror=()=>{try{ws.close();}catch(_){}};
+  ws.onmessage=(e)=>{
+    let msg;try{msg=JSON.parse(e.data);}catch(_){return;}
+    // El servidor responde con la sala asignada
+    if(msg.type==='publicAssigned'){
+      roomCode=msg.room;
+      isHost=msg.isHost||false;
+      players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
+      if(msg.isHost){
+        // Si somos el host de la sala pública, cargar pool de palabras por defecto
+        activeWordPool=buildWordPool();
+        totalRounds=3;turnTime=90;wordChoiceCount=3;maxHintsOverride=-1;
+      }
+      document.getElementById('publicStatus').textContent=
+        msg.isHost?'Sala creada, esperando jugadores…':'¡Sala encontrada!';
+      // Reasignar handler de mensajes normal
+      ws.onmessage=(e2)=>{let m;try{m=JSON.parse(e2.data);}catch(_){return;}handleMessage(m);};
+      ws.onclose=()=>{setStatus('🔴 Reconectando…','#c0392b');if(!wsReconnectTimer)wsReconnectTimer=setTimeout(()=>{wsReconnectTimer=null;connectWS();},3000);};
+      showScreen('avatar');setupAvatarEditor();
+    } else {
+      // Cualquier otro mensaje, procesar normal
+      handleMessage(msg);
+    }
+  };
 }
 function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');}
 function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.parentElement.classList.add('shake');setTimeout(()=>el.parentElement.classList.remove('shake'),300);setTimeout(()=>el.textContent='',3000);}
