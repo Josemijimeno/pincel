@@ -558,7 +558,20 @@ let strokeBatch=[],batchTimer=null;
 let guessOrder=0,painterPointsThisTurn=0,maxGuesserPoints=0;
 // ── NUEVO: sistema de pistas ──────────────────────────────────
 let hintInterval=null,revealedIndices=new Set(),hintMasked=[];
-const HINT_INTERVAL_SECS=25; // pista cada 25 segundos
+
+// ── Calcular número de pistas según longitud de palabra ───────
+function calcMaxHints(word){
+  const letters=word.replace(/ /g,'').length;
+  if(letters<=4)return 1;
+  if(letters<=8)return 2;
+  return 3;
+}
+// ── Calcular intervalo entre pistas según tiempo y nº pistas ──
+function calcHintInterval(turnTimeSecs,maxHints){
+  // Repartir las pistas uniformemente dejando tiempo al inicio
+  // Ej: 90s con 3 pistas → pista en s30, s55, s75 (cada ~22s)
+  return Math.floor(turnTimeSecs/(maxHints+1));
+}
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const WS_URL='wss://pincel-production-1a1f.up.railway.app';
 
@@ -629,12 +642,16 @@ function markPlayerState(id,online){document.querySelectorAll('.player-chip[data
 function startHintTimer(){
   clearInterval(hintInterval);
   revealedIndices=new Set();
-  // Construir array enmascarado inicial basado en currentWord
   hintMasked=currentWord.split('').map(c=>c===' '?' ':'_');
+  const maxHints=calcMaxHints(currentWord);
+  const intervalSecs=calcHintInterval(turnTime,maxHints);
+  let hintCount=0;
   hintInterval=setInterval(()=>{
     if(!gameActive||!currentWord)return;
+    if(hintCount>=maxHints){stopHintTimer();return;}
     revelarPista();
-  },HINT_INTERVAL_SECS*1000);
+    hintCount++;
+  },intervalSecs*1000);
 }
 
 // Parar el temporizador de pistas
@@ -646,16 +663,13 @@ function stopHintTimer(){
 // Revelar una letra aleatoria todavía oculta (solo el dibujante)
 function revelarPista(){
   const letters=currentWord.split('');
-  // Índices de letras no reveladas y que no son espacios
   const hidden=letters.map((c,i)=>c!==' '&&!revealedIndices.has(i)?i:-1).filter(i=>i>=0);
-  if(hidden.length===0)return; // todas reveladas
-  // Elegir índice aleatorio
+  if(hidden.length===0)return;
   const idx=hidden[Math.floor(Math.random()*hidden.length)];
   revealedIndices.add(idx);
   hintMasked[idx]=currentWord[idx];
-  // Actualizar display del dibujante
-  document.getElementById('wordDisplay').textContent=currentWord;
-  // Enviar pista a todos
+  // El pintor NO actualiza su display — ya ve la palabra completa
+  // Solo actualiza el chat del pintor con la pista enviada
   sendMsg('hint',{masked:hintMasked.join(''),idx});
   addChat({type:'hint',text:'💡 Pista: '+buildMaskedDisplay(hintMasked)});
 }
@@ -664,7 +678,11 @@ function revelarPista(){
 function onHintReceived(data){
   if(!data||!data.masked)return;
   hintMasked=data.masked.split('');
-  document.getElementById('wordDisplay').textContent=buildMaskedDisplay(hintMasked);
+  // Solo actualizar el display si NO eres el pintor
+  // El pintor ya ve su palabra completa y no debe perderla
+  if(!isDrawing){
+    document.getElementById('wordDisplay').textContent=buildMaskedDisplay(hintMasked);
+  }
   addChat({type:'hint',text:'💡 Pista: '+buildMaskedDisplay(hintMasked)});
 }
 
