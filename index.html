@@ -65,6 +65,9 @@
   .player-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--success);}
   .player-chip.offline .dot{background:#aaa;}
   .player-chip.offline{opacity:.5;}
+  /* ── NUEVO: chip verde cuando adivina ── */
+  .player-chip.guessed-chip{border-color:var(--success);background:rgba(30,168,84,0.08);}
+  .player-chip.guessed-chip .dot{background:var(--success);}
   @keyframes chipIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
   #game{flex-direction:column;}
   .game-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:2px solid var(--ink);background:var(--ink);color:var(--paper);flex-shrink:0;gap:12px;}
@@ -101,6 +104,7 @@
   @keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   .chat-msg.system{opacity:.5;font-style:italic;}
   .chat-msg.correct{color:var(--success);font-weight:700;}
+  .chat-msg.hint{color:var(--warn);font-style:italic;}
   .chat-msg.close{color:var(--warn);}
   .chat-input-wrap{border-top:2px solid var(--ink);padding:9px;display:flex;gap:6px;background:var(--cream);}
   #chatInput{flex:1;padding:8px 10px;border:2px solid var(--ink);font-family:var(--mono);font-size:12px;background:var(--canvas-bg);color:var(--ink);outline:none;}
@@ -396,16 +400,13 @@
 // ══════════════════════════════════════════════════════════════
 //  SVG AVATAR SYSTEM
 // ══════════════════════════════════════════════════════════════
-
 const DEFAULT_AVATAR={skin:'fde3c0',eyes:'round',mouth:'smile',hair:'short',hairColor:'1a1a1a',shirt:'e84c1e',hat:'none'};
 let myAvatar=JSON.parse(localStorage.getItem('pincelAvatar')||JSON.stringify(DEFAULT_AVATAR));
 
 function shade(hex,pct){
   hex=hex.replace('#','');
   if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
-  let r=parseInt(hex.slice(0,2),16)+pct;
-  let g=parseInt(hex.slice(2,4),16)+pct;
-  let b=parseInt(hex.slice(4,6),16)+pct;
+  let r=parseInt(hex.slice(0,2),16)+pct,g=parseInt(hex.slice(2,4),16)+pct,b=parseInt(hex.slice(4,6),16)+pct;
   return'#'+[r,g,b].map(v=>Math.min(255,Math.max(0,v)).toString(16).padStart(2,'0')).join('');
 }
 
@@ -451,7 +452,6 @@ function makeSVGAvatar(av,W,H){
   b+=makeHatSVG(av.hat,sh,shD,shL,id);
   return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 165" width="${W}" height="${H}">${defs}<g>${b}</g></svg>`;
 }
-
 function makeHairSVG(hair,hc,id,hcD,hcL){
   const g=`url(#${id}_hc)`,st=`stroke="${hcD}" stroke-width="2"`;
   if(hair==='short')return`<path d="M22,44 Q22,8 60,6 Q98,8 98,44 Q98,20 60,18 Q22,20 22,44 Z" fill="${g}" ${st}/><rect x="20" y="30" width="10" height="20" rx="4" fill="${g}" ${st}/><rect x="90" y="30" width="10" height="20" rx="4" fill="${g}" ${st}/>`;
@@ -463,41 +463,36 @@ function makeHairSVG(hair,hc,id,hcD,hcL){
   if(hair==='beanie')return`<path d="M20,40 Q20,4 60,2 Q100,4 100,40 L100,24 L20,24 Z" fill="${g}" ${st}/><rect x="18" y="22" width="84" height="14" rx="4" fill="${hcD}" stroke="${hcD}" stroke-width="1.5"/><circle cx="60" cy="4" r="9" fill="${hcL}" stroke="${hcD}" stroke-width="1.5"/>`;
   return'';
 }
-
 function makeEyesSVG(eyes,id){
   if(eyes==='round'||eyes==='almond'||eyes==='wide'){
     const ry=eyes==='almond'?9:eyes==='wide'?13:11;
-    return`<ellipse cx="40" cy="48" rx="12" ry="${ry}" fill="white" stroke="#1a1008" stroke-width="1.8"/><ellipse cx="80" cy="48" rx="12" ry="${ry}" fill="white" stroke="#1a1008" stroke-width="1.8"/><ellipse cx="40" cy="50" rx="8" ry="9" fill="url(#${id}_iris)"/><ellipse cx="80" cy="50" rx="8" ry="9" fill="url(#${id}_iris)"/><circle cx="40" cy="51" r="5" fill="#0a0a18"/><circle cx="80" cy="51" r="5" fill="#0a0a18"/><circle cx="43" cy="47" r="2.5" fill="white"/><circle cx="83" cy="47" r="2.5" fill="white"/><circle cx="38" cy="52" r="1" fill="rgba(255,255,255,0.5)"/><circle cx="78" cy="52" r="1" fill="rgba(255,255,255,0.5)"/>`;
+    return`<ellipse cx="40" cy="48" rx="12" ry="${ry}" fill="white" stroke="#1a1008" stroke-width="1.8"/><ellipse cx="80" cy="48" rx="12" ry="${ry}" fill="white" stroke="#1a1008" stroke-width="1.8"/><ellipse cx="40" cy="50" rx="8" ry="9" fill="url(#${id}_iris)"/><ellipse cx="80" cy="50" rx="8" ry="9" fill="url(#${id}_iris)"/><circle cx="40" cy="51" r="5" fill="#0a0a18"/><circle cx="80" cy="51" r="5" fill="#0a0a18"/><circle cx="43" cy="47" r="2.5" fill="white"/><circle cx="83" cy="47" r="2.5" fill="white"/>`;
   }
   if(eyes==='glasses')return`<ellipse cx="40" cy="48" rx="13" ry="10" fill="rgba(180,220,255,0.25)" stroke="#555" stroke-width="2"/><ellipse cx="80" cy="48" rx="13" ry="10" fill="rgba(180,220,255,0.25)" stroke="#555" stroke-width="2"/><line x1="53" y1="48" x2="67" y2="48" stroke="#555" stroke-width="2"/><line x1="18" y1="44" x2="27" y2="46" stroke="#555" stroke-width="2"/><line x1="102" y1="44" x2="93" y2="46" stroke="#555" stroke-width="2"/><circle cx="40" cy="49" r="5" fill="#0a0a18"/><circle cx="80" cy="49" r="5" fill="#0a0a18"/><circle cx="43" cy="46" r="2" fill="white"/><circle cx="83" cy="46" r="2" fill="white"/>`;
-  if(eyes==='wink')return`<ellipse cx="40" cy="48" rx="12" ry="11" fill="white" stroke="#1a1008" stroke-width="1.8"/><ellipse cx="40" cy="50" rx="8" ry="9" fill="url(#${id}_iris)"/><circle cx="40" cy="51" r="5" fill="#0a0a18"/><circle cx="43" cy="47" r="2.5" fill="white"/><path d="M68,46 Q80,54 92,46" stroke="#1a1008" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M70,44 Q80,48 90,44" stroke="#1a1008" stroke-width="1.5" stroke-linecap="round" fill="none"/>`;
+  if(eyes==='wink')return`<ellipse cx="40" cy="48" rx="12" ry="11" fill="white" stroke="#1a1008" stroke-width="1.8"/><ellipse cx="40" cy="50" rx="8" ry="9" fill="url(#${id}_iris)"/><circle cx="40" cy="51" r="5" fill="#0a0a18"/><circle cx="43" cy="47" r="2.5" fill="white"/><path d="M68,46 Q80,54 92,46" stroke="#1a1008" stroke-width="3" stroke-linecap="round" fill="none"/>`;
   if(eyes==='mono')return`<ellipse cx="40" cy="48" rx="12" ry="11" fill="white" stroke="#1a1008" stroke-width="1.8"/><ellipse cx="40" cy="50" rx="8" ry="9" fill="url(#${id}_iris)"/><circle cx="40" cy="51" r="5" fill="#0a0a18"/><circle cx="43" cy="47" r="2.5" fill="white"/><circle cx="80" cy="48" r="14" fill="rgba(180,220,255,0.2)" stroke="#888" stroke-width="2.5"/><circle cx="80" cy="49" r="5" fill="#0a0a18"/><line x1="92" y1="58" x2="98" y2="72" stroke="#888" stroke-width="2"/>`;
   return'';
 }
-
 function makeMouthSVG(mouth,id,hcD){
   if(mouth==='smile')return`<path d="M47,64 Q60,74 73,64" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round" fill="none"/>`;
   if(mouth==='grin')return`<path d="M46,63 Q60,76 74,63" fill="#cc2233" stroke="#1a1008" stroke-width="2"/><path d="M48,64 L72,64" stroke="white" stroke-width="6" fill="none"/><line x1="53" y1="61" x2="53" y2="68" stroke="#eee" stroke-width="1"/><line x1="60" y1="61" x2="60" y2="68" stroke="#eee" stroke-width="1"/><line x1="67" y1="61" x2="67" y2="68" stroke="#eee" stroke-width="1"/>`;
   if(mouth==='serious')return`<line x1="46" y1="66" x2="74" y2="66" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round"/>`;
-  if(mouth==='tongue')return`<path d="M47,64 Q60,74 73,64" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round" fill="none"/><ellipse cx="60" cy="74" rx="8" ry="6" fill="#e84c7a" stroke="#1a1008" stroke-width="1.5"/><line x1="60" y1="69" x2="60" y2="79" stroke="#c0305a" stroke-width="1.2"/>`;
+  if(mouth==='tongue')return`<path d="M47,64 Q60,74 73,64" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round" fill="none"/><ellipse cx="60" cy="74" rx="8" ry="6" fill="#e84c7a" stroke="#1a1008" stroke-width="1.5"/>`;
   if(mouth==='mustache')return`<path d="M47,66 Q60,74 73,66" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M44,58 Q52,53 60,57 Q68,53 76,58 Q70,64 60,61 Q50,64 44,58 Z" fill="${hcD}" stroke="#1a1008" stroke-width="1.5"/>`;
   if(mouth==='beard')return`<path d="M47,64 Q60,74 73,64" stroke="#1a1008" stroke-width="2.5" stroke-linecap="round" fill="none"/><ellipse cx="60" cy="76" rx="20" ry="10" fill="${hcD}" stroke="#1a1008" stroke-width="1.5"/>`;
   return'';
 }
-
 function makeHatSVG(hat,sh,shD,shL,id){
   if(hat==='none')return'';
-  if(hat==='cap')return`<path d="M20,20 Q20,-2 60,-4 Q100,-2 100,20 L100,28 L20,28 Z" fill="${sh}" stroke="#1a1008" stroke-width="2"/><rect x="20" y="18" width="80" height="12" rx="3" fill="${shD}" stroke="#1a1008" stroke-width="1.5"/><path d="M76,26 Q102,28 104,36 Q100,40 86,34 Z" fill="${shD}" stroke="#1a1008" stroke-width="1.5"/><ellipse cx="44" cy="8" rx="10" ry="4" fill="${shL}" opacity="0.35"/>`;
-  if(hat==='top')return`<rect x="28" y="-18" width="64" height="34" rx="4" fill="#1a1a1a" stroke="#111" stroke-width="2"/><rect x="14" y="12" width="92" height="10" rx="3" fill="#222" stroke="#111" stroke-width="2"/><rect x="28" y="8" width="64" height="6" fill="#c0392b"/><ellipse cx="44" cy="-6" rx="10" ry="5" fill="rgba(255,255,255,0.1)"/>`;
-  if(hat==='crown')return`<path d="M16,16 L16,-6 L34,6 L60,-14 L86,6 L104,-6 L104,16 Z" fill="#f1c40f" stroke="#c0962b" stroke-width="2"/><rect x="16" y="12" width="88" height="8" rx="3" fill="#e6a800" stroke="#c0962b" stroke-width="1.5"/><circle cx="34" cy="4" r="5" fill="#e74c3c" stroke="#c0962b" stroke-width="1.5"/><circle cx="60" cy="-6" r="6" fill="#9b59b6" stroke="#c0962b" stroke-width="1.5"/><circle cx="86" cy="4" r="5" fill="#2ecc71" stroke="#c0962b" stroke-width="1.5"/><circle cx="34" cy="4" r="2" fill="rgba(255,255,255,0.5)"/><circle cx="60" cy="-6" r="2.5" fill="rgba(255,255,255,0.5)"/><circle cx="86" cy="4" r="2" fill="rgba(255,255,255,0.5)"/>`;
-  if(hat==='chef')return`<rect x="26" y="6" width="68" height="14" rx="3" fill="white" stroke="#ccc" stroke-width="1.5"/><ellipse cx="60" cy="-6" rx="34" ry="22" fill="white" stroke="#ccc" stroke-width="1.5"/><ellipse cx="46" cy="-12" rx="10" ry="6" fill="rgba(255,255,255,0.6)"/>`;
-  if(hat==='beret')return`<ellipse cx="52" cy="8" rx="46" ry="22" fill="${sh}" stroke="#1a1008" stroke-width="2" transform="rotate(-10,52,8)"/><ellipse cx="60" cy="18" rx="24" ry="6" fill="${shD}"/><ellipse cx="40" cy="2" rx="14" ry="6" fill="${shL}" opacity="0.3"/>`;
+  if(hat==='cap')return`<path d="M20,20 Q20,-2 60,-4 Q100,-2 100,20 L100,28 L20,28 Z" fill="${sh}" stroke="#1a1008" stroke-width="2"/><rect x="20" y="18" width="80" height="12" rx="3" fill="${shD}" stroke="#1a1008" stroke-width="1.5"/><path d="M76,26 Q102,28 104,36 Q100,40 86,34 Z" fill="${shD}" stroke="#1a1008" stroke-width="1.5"/>`;
+  if(hat==='top')return`<rect x="28" y="-18" width="64" height="34" rx="4" fill="#1a1a1a" stroke="#111" stroke-width="2"/><rect x="14" y="12" width="92" height="10" rx="3" fill="#222" stroke="#111" stroke-width="2"/><rect x="28" y="8" width="64" height="6" fill="#c0392b"/>`;
+  if(hat==='crown')return`<path d="M16,16 L16,-6 L34,6 L60,-14 L86,6 L104,-6 L104,16 Z" fill="#f1c40f" stroke="#c0962b" stroke-width="2"/><rect x="16" y="12" width="88" height="8" rx="3" fill="#e6a800" stroke="#c0962b" stroke-width="1.5"/><circle cx="34" cy="4" r="5" fill="#e74c3c" stroke="#c0962b" stroke-width="1.5"/><circle cx="60" cy="-6" r="6" fill="#9b59b6" stroke="#c0962b" stroke-width="1.5"/><circle cx="86" cy="4" r="5" fill="#2ecc71" stroke="#c0962b" stroke-width="1.5"/>`;
+  if(hat==='chef')return`<rect x="26" y="6" width="68" height="14" rx="3" fill="white" stroke="#ccc" stroke-width="1.5"/><ellipse cx="60" cy="-6" rx="34" ry="22" fill="white" stroke="#ccc" stroke-width="1.5"/>`;
+  if(hat==='beret')return`<ellipse cx="52" cy="8" rx="46" ry="22" fill="${sh}" stroke="#1a1008" stroke-width="2" transform="rotate(-10,52,8)"/><ellipse cx="60" cy="18" rx="24" ry="6" fill="${shD}"/>`;
   return'';
 }
-
 function makeMiniSVG(av,size){
   size=size||40;
-  const sk='#'+av.skin,hc='#'+av.hairColor;
   const skD=shade('#'+av.skin,-15),hcD=shade('#'+av.hairColor,-25),hcL=shade('#'+av.hairColor,15);
   const id='mini_'+Math.random().toString(36).slice(2,6);
   return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="${size}" height="${size}" class="mini-avatar-svg">
@@ -517,7 +512,6 @@ function makeMiniSVG(av,size){
     <circle cx="30" cy="37" r="1.8" fill="white"/>
     <circle cx="54" cy="37" r="1.8" fill="white"/>
     <path d="M30,54 Q40,62 50,54" stroke="#1a1008" stroke-width="2" stroke-linecap="round" fill="none"/>
-    <ellipse cx="32" cy="18" rx="9" ry="6" fill="rgba(255,255,255,0.2)" transform="rotate(-20,32,18)"/>
   </svg>`;
 }
 
@@ -562,6 +556,10 @@ let canvas,ctx,drawing=false,lastX=0,lastY=0;
 let currentColor='#0f0e0c',currentSize=3,currentTool='pen';
 let strokeBatch=[],batchTimer=null;
 let guessOrder=0,painterPointsThisTurn=0,maxGuesserPoints=0;
+// ── NUEVO: sistema de pistas ──────────────────────────────────
+let hintInterval=null,revealedIndices=new Set(),hintMasked=[];
+const HINT_INTERVAL_SECS=25; // pista cada 25 segundos
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const WS_URL='wss://pincel-production-1a1f.up.railway.app';
 
 // ══════════════════════════════════════════════════════════════
@@ -617,9 +615,63 @@ function handleMessage(msg){
     case 'game-end':     onGameEnd(msg.data);break;
     case 'canvas-sync':  if(msg.data.for===myId)onSyncCanvas(msg.data);break;
     case 'request-sync': if(isDrawing)sendCanvasSync(msg.from);break;
+    // ── NUEVO: pista recibida del dibujante ────────────────────
+    case 'hint':         onHintReceived(msg.data);break;
   }
 }
 function markPlayerState(id,online){document.querySelectorAll('.player-chip[data-id="'+id+'"]').forEach(c=>c.classList.toggle('offline',!online));}
+
+// ══════════════════════════════════════════════════════════════
+//  SISTEMA DE PISTAS (NUEVO)
+// ══════════════════════════════════════════════════════════════
+
+// Iniciar el temporizador de pistas (solo el dibujante lo dispara)
+function startHintTimer(){
+  clearInterval(hintInterval);
+  revealedIndices=new Set();
+  // Construir array enmascarado inicial basado en currentWord
+  hintMasked=currentWord.split('').map(c=>c===' '?' ':'_');
+  hintInterval=setInterval(()=>{
+    if(!gameActive||!currentWord)return;
+    revelarPista();
+  },HINT_INTERVAL_SECS*1000);
+}
+
+// Parar el temporizador de pistas
+function stopHintTimer(){
+  clearInterval(hintInterval);
+  hintInterval=null;
+}
+
+// Revelar una letra aleatoria todavía oculta (solo el dibujante)
+function revelarPista(){
+  const letters=currentWord.split('');
+  // Índices de letras no reveladas y que no son espacios
+  const hidden=letters.map((c,i)=>c!==' '&&!revealedIndices.has(i)?i:-1).filter(i=>i>=0);
+  if(hidden.length===0)return; // todas reveladas
+  // Elegir índice aleatorio
+  const idx=hidden[Math.floor(Math.random()*hidden.length)];
+  revealedIndices.add(idx);
+  hintMasked[idx]=currentWord[idx];
+  // Actualizar display del dibujante
+  document.getElementById('wordDisplay').textContent=currentWord;
+  // Enviar pista a todos
+  sendMsg('hint',{masked:hintMasked.join(''),idx});
+  addChat({type:'hint',text:'💡 Pista: '+buildMaskedDisplay(hintMasked)});
+}
+
+// Recibir pista (los que no dibujan)
+function onHintReceived(data){
+  if(!data||!data.masked)return;
+  hintMasked=data.masked.split('');
+  document.getElementById('wordDisplay').textContent=buildMaskedDisplay(hintMasked);
+  addChat({type:'hint',text:'💡 Pista: '+buildMaskedDisplay(hintMasked)});
+}
+
+// Construir display visual de la palabra enmascarada
+function buildMaskedDisplay(arr){
+  return arr.map(c=>c===' '?' ':c==='_'?'_':c).join(' ');
+}
 
 // ══════════════════════════════════════════════════════════════
 //  AVATAR EDITOR
@@ -632,8 +684,7 @@ function setupAvatarEditor(){
       const cat=el.dataset.cat,val=el.dataset.val;
       myAvatar[cat]=val;
       document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));
-      el.classList.add('active');
-      redraw();
+      el.classList.add('active');redraw();
       localStorage.setItem('pincelAvatar',JSON.stringify(myAvatar));
     });
   });
@@ -676,7 +727,6 @@ window.addEventListener('DOMContentLoaded',()=>{
     if(el){document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));el.classList.add('active');}
   });
 });
-
 function setupLobbyUI(){
   document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('tab-create').style.display=t.dataset.tab==='create'?'block':'none';document.getElementById('tab-join').style.display=t.dataset.tab==='join'?'block':'none';}));
   document.getElementById('btnCreate').addEventListener('click',handleCreate);
@@ -716,17 +766,22 @@ function setupWaitingRoom(){
   if(isHost){const names=[...selectedThemes].map(k=>THEMES[k].emoji+' '+THEMES[k].name);document.getElementById('activeThemesBadge').textContent=names.length>0?'Temáticas: '+names.join(', '):'🎲 Todas las temáticas · '+activeWordPool.length+' palabras';}
   updatePlayersGrid();
 }
+
+// ── updatePlayersGrid: chip verde si ha adivinado ─────────────
 function updatePlayersGrid(){
   document.getElementById('playersGrid').innerHTML=Object.entries(players).map(([id,p])=>{
     const av=p.avatar||DEFAULT_AVATAR;
     const miniSvg=makeMiniSVG(av,36);
     const chip=document.createElement('div');
-    chip.className='player-chip'+(p.connected===false?' offline':'');
+    chip.className='player-chip'
+      +(p.connected===false?' offline':'')
+      +(p.guessed?' guessed-chip':''); // ← NUEVO: verde si adivinó
     chip.dataset.id=id;
     chip.innerHTML=miniSvg+`<div class="dot"></div>${san(p.name)}${id===myId?' (tú)':''}`;
     return chip.outerHTML;
   }).join('');
 }
+
 function copyCode(){navigator.clipboard.writeText(roomCode).then(()=>showToast('¡Código copiado!'));}
 function startGame(){
   if(Object.keys(players).length<2){showToast('Necesitas al menos 2 jugadores');return;}
@@ -745,6 +800,7 @@ function onGameStart(data){
 function startTurn(){
   clearCanvas();Object.keys(players).forEach(id=>players[id].guessed=false);
   guessOrder=0;painterPointsThisTurn=0;maxGuesserPoints=0;
+  stopHintTimer(); // ← NUEVO: limpiar pistas anteriores
   currentDrawerId=turnOrder[turnIndex%turnOrder.length];
   isDrawing=(currentDrawerId===myId);
   document.getElementById('toolbar').classList.toggle('hidden',!isDrawing);
@@ -752,6 +808,7 @@ function startTurn(){
   document.getElementById('chatInput').placeholder=isDrawing?'Estás dibujando...':'Escribe tu respuesta...';
   canvas.style.cursor=isDrawing?'crosshair':'default';
   updateScoreList();
+  updatePlayersGrid(); // ← refrescar chips (quitar verde del turno anterior)
   if(isDrawing){document.getElementById('drawerNotice').style.display='none';sendMsg('word-options',{for:myId,words:pickWords(3)});}
   else{const dn=players[currentDrawerId]?.name||'Alguien';document.getElementById('drawerNotice').style.display='block';document.getElementById('drawerNoticeName').textContent=dn+' está dibujando...';addChat({type:'system',text:dn+' está dibujando.'});sendMsg('request-sync',{from:myId});}
 }
@@ -761,8 +818,21 @@ function showWordModal(words){
   modal.classList.add('active');
   document.querySelectorAll('.word-choice').forEach(el=>el.addEventListener('click',()=>{modal.classList.remove('active');chooseWord(el.dataset.word);}));
 }
-function chooseWord(word){currentWord=word;usedWords.push(word);document.getElementById('wordDisplay').textContent=word;sendMsg('word-chosen',{drawerId:myId,masked:maskWord(word),turnTime});startTimer(turnTime);}
-function onWordChosen(data){if(data.drawerId===myId)return;currentWord='';document.getElementById('drawerNotice').style.display='none';document.getElementById('wordDisplay').textContent=data.masked;startTimer(data.turnTime);}
+function chooseWord(word){
+  currentWord=word;usedWords.push(word);
+  document.getElementById('wordDisplay').textContent=word;
+  sendMsg('word-chosen',{drawerId:myId,masked:maskWord(word),turnTime});
+  startTimer(turnTime);
+  startHintTimer(); // ← NUEVO: iniciar pistas al elegir palabra
+}
+function onWordChosen(data){
+  if(data.drawerId===myId)return;
+  currentWord='';
+  hintMasked=data.masked.split('').map(c=>c===' '?' ':'_'); // ← NUEVO: init array pistas
+  document.getElementById('drawerNotice').style.display='none';
+  document.getElementById('wordDisplay').textContent=data.masked;
+  startTimer(data.turnTime);
+}
 function sendCanvasSync(forId){sendMsg('canvas-sync',{for:forId,dataUrl:canvas.toDataURL('image/png')});}
 function onSyncCanvas(data){if(isDrawing)return;const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=data.dataUrl;}
 function startTimer(secs){clearInterval(timerInterval);timerLeft=secs;updateTimerEl();timerInterval=setInterval(()=>{timerLeft--;updateTimerEl();if(timerLeft<=0){clearInterval(timerInterval);if(isDrawing)endTurn();}},1000);}
@@ -805,16 +875,40 @@ function setupToolbar(){
   document.getElementById('toolClear').addEventListener('click',()=>{if(!isDrawing)return;clearCanvas();const msg={type:'clear',from:myId,data:{}};if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));});
 }
 function setTool(t){currentTool=t;document.getElementById('toolPen').classList.toggle('active',t==='pen');document.getElementById('toolEraser').classList.toggle('active',t==='eraser');}
+
+// ── setupChat: NO mostrar mensaje si es la respuesta correcta ──
 function setupChat(){
   const input=document.getElementById('chatInput');
-  const send=()=>{const text=input.value.trim();if(!text||isDrawing)return;input.value='';const msg={type:'guess',data:{senderId:myId,senderName:myName,text},from:myId,fromName:myName};addChat({type:'chat',name:myName,text});if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));procesarAdivinanza(myId,myName,text);};
+  const send=()=>{
+    const text=input.value.trim();
+    if(!text||isDrawing)return;
+    input.value='';
+    const msg={type:'guess',data:{senderId:myId,senderName:myName,text},from:myId,fromName:myName};
+    // ← NUEVO: solo mostrar en chat si NO es la respuesta correcta
+    if(!currentWord||norm(text)!==norm(currentWord)){
+      addChat({type:'chat',name:myName,text});
+    }
+    if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));
+    procesarAdivinanza(myId,myName,text);
+  };
   input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
   document.getElementById('sendBtn').addEventListener('click',send);
 }
-function onGuess(msg){if(!gameActive)return;const{senderId,senderName,text}=msg.data;if(senderId===myId)return;addChat({type:'chat',name:senderName,text});procesarAdivinanza(senderId,senderName,text);}
+
+// ── onGuess: NO mostrar si es la respuesta correcta ───────────
+function onGuess(msg){
+  if(!gameActive)return;
+  const{senderId,senderName,text}=msg.data;
+  if(senderId===myId)return;
+  // ← NUEVO: ocultar si es la palabra correcta
+  if(!currentWord||norm(text)!==norm(currentWord)){
+    addChat({type:'chat',name:senderName,text});
+  }
+  procesarAdivinanza(senderId,senderName,text);
+}
+
 function procesarAdivinanza(senderId,senderName,text){
   if(!currentWord||!gameActive)return;
-  const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   if(norm(text)===norm(currentWord)){
     if(players[senderId]&&!players[senderId].guessed){
       players[senderId].guessed=true;guessOrder++;
@@ -824,28 +918,37 @@ function procesarAdivinanza(senderId,senderName,text){
       const painterGain=Math.round(pts*0.25);
       painterPointsThisTurn=Math.min(painterPointsThisTurn+painterGain,maxGuesserPoints);
       if(players[currentDrawerId]){const prev=players[currentDrawerId].score-(painterPointsThisTurn-painterGain<0?0:painterPointsThisTurn-painterGain);players[currentDrawerId].score=prev+painterPointsThisTurn;}
-      addChat({type:'correct',text:'¡'+san(senderName)+' lo adivinó! +'+pts+' pts'});
+      // ← NUEVO: mensaje sin revelar la palabra
+      addChat({type:'correct',text:'🎉 '+san(senderName)+' ha adivinado la palabra! +'+pts+' pts'});
       updateScoreList();
+      updatePlayersGrid(); // ← NUEVO: actualizar chips (verde al que adivinó)
       if(senderId===myId){showToast('¡Correcto! +'+pts+' pts 🎉');launchConfetti();}
       if(currentDrawerId===myId){showToast('¡Alguien adivinó! +'+painterGain+' pts para ti 🎨');}
       const nonDrawers=Object.keys(players).filter(id=>id!==currentDrawerId);
       if(nonDrawers.every(id=>players[id].guessed)&&isDrawing)setTimeout(()=>endTurn(),1000);
     }
-  }else if(currentWord){if(isClose(norm(text),norm(currentWord))&&senderId===myId)addChat({type:'close',name:senderName,text:'¡Muy cerca!'});}
+  }else if(currentWord){
+    if(isClose(norm(text),norm(currentWord))&&senderId===myId)addChat({type:'close',name:senderName,text:'¡Muy cerca!'});
+  }
 }
 function isClose(a,b){if(!b||Math.abs(a.length-b.length)>3)return false;let d=0;for(let i=0;i<Math.max(a.length,b.length);i++)if(a[i]!==b[i])d++;return d<=2;}
 function addChat(msg){
   const el=document.getElementById('chatMessages');
   const div=document.createElement('div');div.className='chat-msg '+(msg.type||'');
   if(msg.type==='system')div.textContent=msg.text;
-  else if(msg.type==='correct')div.textContent='✅ '+msg.text;
+  else if(msg.type==='correct')div.textContent=msg.text;
+  else if(msg.type==='hint')div.textContent=msg.text;
   else if(msg.type==='close')div.innerHTML=`<b>${san(msg.name||'')}</b>: <span style="color:var(--warn)">¡Muy cerca!</span>`;
   else div.innerHTML=`<b>${san(msg.name||'')}</b>: ${san(msg.text)}`;
   el.appendChild(div);el.scrollTop=el.scrollHeight;
 }
-function endTurn(){clearInterval(timerInterval);sendMsg('turn-end',{word:currentWord,scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,p.score])),nextTurnIndex:turnIndex+1});}
+function endTurn(){
+  clearInterval(timerInterval);
+  stopHintTimer(); // ← NUEVO: parar pistas al terminar el turno
+  sendMsg('turn-end',{word:currentWord,scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,p.score])),nextTurnIndex:turnIndex+1});
+}
 function onTurnEnd(data){
-  clearInterval(timerInterval);gameActive=false;
+  clearInterval(timerInterval);stopHintTimer();gameActive=false;
   Object.entries(data.scores).forEach(([id,s])=>{if(players[id])players[id].score=s;});
   updateScoreList();
   document.getElementById('roundEndTitle').textContent='La palabra era...';
@@ -871,7 +974,7 @@ function updateScoreList(){
 }
 function endGame(){sendMsg('game-end',{scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,p.score]))});}
 function onGameEnd(data){
-  gameActive=false;clearInterval(timerInterval);
+  gameActive=false;clearInterval(timerInterval);stopHintTimer();
   if(data.scores)Object.entries(data.scores).forEach(([id,s])=>{if(players[id])players[id].score=s;});
   showScreen('scoreboard');
   const sorted=Object.entries(players).sort((a,b)=>b[1].score-a[1].score);
