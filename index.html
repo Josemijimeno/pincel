@@ -184,69 +184,25 @@
     <div class="logo-sub">El juego de dibujo en tiempo real</div>
   </div>
   <div class="lobby-card">
-    <div class="tabs">
-      <div class="tab active" data-tab="create">Crear sala</div>
-      <div class="tab" data-tab="join">Unirse</div>
-      <div class="tab" data-tab="public">🌍 Público</div>
+    <div class="field-group" style="margin-bottom:20px;">
+      <label>Tu nombre</label>
+      <input type="text" id="playerName" placeholder="Ej: Picasso" maxlength="16" autocomplete="off">
     </div>
-    <div id="tab-create">
-      <div class="field-group"><label>Tu nombre</label><input type="text" id="createName" placeholder="Ej: Picasso" maxlength="16" autocomplete="off"></div>
-      <div class="config-grid">
-        <div class="config-row">
-          <div class="config-icon">👥</div>
-          <div class="config-label">Jugadores</div>
-          <select id="createPlayers" class="config-select"><option value="2">2</option><option value="4">4</option><option value="6">6</option><option value="8" selected>8</option></select>
-        </div>
-        <div class="config-row">
-          <div class="config-icon">⏱️</div>
-          <div class="config-label">Tiempo dibujo</div>
-          <select id="createTime" class="config-select"><option value="60">60 seg</option><option value="80">80 seg</option><option value="90" selected>90 seg</option><option value="120">120 seg</option><option value="150">150 seg</option></select>
-        </div>
-        <div class="config-row">
-          <div class="config-icon">🔄</div>
-          <div class="config-label">Rondas</div>
-          <select id="createRounds" class="config-select"><option value="2">2</option><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="10">10</option></select>
-        </div>
-        <div class="config-row">
-          <div class="config-icon">📝</div>
-          <div class="config-label">Opciones de palabra</div>
-          <select id="createWordCount" class="config-select"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
-        </div>
-        <div class="config-row">
-          <div class="config-icon">💡</div>
-          <div class="config-label">Pistas</div>
-          <select id="createHints" class="config-select"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
-        </div>
-      </div>
-      <div class="section-title">🎨 Temáticas de palabras</div>
-      <div style="font-family:var(--mono);font-size:11px;opacity:.5;margin-bottom:10px;">Selecciona una o varias. Sin selección = todas mezcladas.</div>
-      <div class="selected-themes" id="selectedThemes"></div>
-      <div class="themes-grid" id="themesGrid"></div>
-      <div class="section-title">✏️ Palabras personalizadas</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-primary" id="btnCreate">🎨 Crear sala privada</button>
+      <button class="btn btn-blue" id="btnGoJoin">🔑 Unirse con código</button>
+      <button class="btn" id="btnPublic" style="background:var(--success);color:#fff;border-color:var(--success);">🌍 Jugar con desconocidos</button>
+    </div>
+    <div id="joinCodeWrap" style="display:none;margin-top:14px;">
       <div class="field-group">
-        <label>Tus palabras (separadas por comas)</label>
-        <textarea id="customWords" placeholder="silla, elefante, guitarra, volcán..."></textarea>
-        <div class="word-count-badge" id="customWordCount">0 palabras</div>
+        <label>Código de sala</label>
+        <input type="text" id="joinCode" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:20px" autocomplete="off">
       </div>
-      <div class="error-msg" id="createError"></div>
-      <button class="btn btn-primary" id="btnCreate">Crear sala →</button>
-    </div>
-    <div id="tab-join" style="display:none">
-      <div class="field-group"><label>Tu nombre</label><input type="text" id="joinName" placeholder="Ej: Dalí" maxlength="16" autocomplete="off"></div>
-      <div class="field-group"><label>Código de sala</label><input type="text" id="joinCode" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:20px" autocomplete="off"></div>
       <div class="error-msg" id="joinError"></div>
       <button class="btn btn-blue" id="btnJoin">Unirse →</button>
     </div>
-    <div id="tab-public" style="display:none">
-      <div class="field-group"><label>Tu nombre</label><input type="text" id="publicName" placeholder="Ej: Monet" maxlength="16" autocomplete="off"></div>
-      <div style="text-align:center;padding:16px 0 8px;">
-        <div style="font-size:40px;margin-bottom:8px;">🌍</div>
-        <div style="font-family:var(--mono);font-size:12px;opacity:.6;line-height:1.8;">Entra en una sala pública con jugadores de todo el mundo.<br>Si no hay nadie, crearemos una y esperaremos.</div>
-      </div>
-      <div id="publicStatus" style="font-family:var(--mono);font-size:12px;color:var(--success);text-align:center;min-height:20px;margin-bottom:8px;"></div>
-      <div class="error-msg" id="publicError"></div>
-      <button class="btn btn-primary" id="btnPublic">🌍 Jugar con desconocidos →</button>
-    </div>
+    <div id="publicStatus" style="font-family:var(--mono);font-size:12px;color:var(--success);text-align:center;min-height:20px;margin-top:10px;display:none;"></div>
+    <div class="error-msg" id="createError"></div>
   </div>
 </div>
 
@@ -343,6 +299,47 @@
         </div>
       </div>
       <button class="btn btn-primary" id="btnAvatarDone" style="margin-top:16px;">¡Listo! →</button>
+      <!-- Configuración de partida — solo visible si eres el host -->
+      <div id="hostConfig" style="display:none;margin-top:20px;border-top:2px solid var(--ink);padding-top:16px;">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;opacity:.5;margin-bottom:12px;">⚙️ Configuración de partida</div>
+        <div class="config-grid">
+          <div class="config-row">
+            <div class="config-icon">👥</div>
+            <div class="config-label">Jugadores máx.</div>
+            <select id="createPlayers" class="config-select"><option value="2">2</option><option value="4">4</option><option value="6">6</option><option value="8" selected>8</option></select>
+          </div>
+          <div class="config-row">
+            <div class="config-icon">⏱️</div>
+            <div class="config-label">Tiempo dibujo</div>
+            <select id="createTime" class="config-select"><option value="60">60 seg</option><option value="80">80 seg</option><option value="90" selected>90 seg</option><option value="120">120 seg</option><option value="150">150 seg</option></select>
+          </div>
+          <div class="config-row">
+            <div class="config-icon">🔄</div>
+            <div class="config-label">Rondas</div>
+            <select id="createRounds" class="config-select"><option value="2">2</option><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="10">10</option></select>
+          </div>
+          <div class="config-row">
+            <div class="config-icon">📝</div>
+            <div class="config-label">Opciones de palabra</div>
+            <select id="createWordCount" class="config-select"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
+          </div>
+          <div class="config-row">
+            <div class="config-icon">💡</div>
+            <div class="config-label">Pistas</div>
+            <select id="createHints" class="config-select"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+          </div>
+        </div>
+        <div class="section-title">🎨 Temáticas</div>
+        <div style="font-family:var(--mono);font-size:11px;opacity:.5;margin-bottom:8px;">Sin selección = todas mezcladas.</div>
+        <div class="selected-themes" id="selectedThemes"></div>
+        <div class="themes-grid" id="themesGrid"></div>
+        <div class="section-title">✏️ Palabras personalizadas</div>
+        <div class="field-group">
+          <label>Separadas por comas</label>
+          <textarea id="customWords" placeholder="silla, elefante, guitarra..."></textarea>
+          <div class="word-count-badge" id="customWordCount">0 palabras</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -754,6 +751,11 @@ function buildMaskedDisplay(arr){
 //  AVATAR EDITOR
 // ══════════════════════════════════════════════════════════════
 function setupAvatarEditor(){
+  // Mostrar configuración solo si eres el host
+  const hostConfig=document.getElementById('hostConfig');
+  if(hostConfig)hostConfig.style.display=isHost?'block':'none';
+  // Inicializar temáticas si es host
+  if(isHost){buildThemesGrid();updateSelectedTags();}
   function redraw(){document.getElementById('avatarPreviewBox').innerHTML=makeSVGAvatar(myAvatar,176,216);}
   redraw();
   document.querySelectorAll('.av-opt').forEach(el=>{
@@ -794,46 +796,46 @@ function buildWordPool(){let pool=[];const custom=parseCustomWords();if(custom.l
 //  INIT
 // ══════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
-  buildThemesGrid();updateSelectedTags();setupLobbyUI();
+  setupLobbyUI();
   canvas=document.getElementById('drawCanvas');ctx=canvas.getContext('2d');
   setupCanvas();setupToolbar();setupChat();
   const p=new URLSearchParams(location.search);
-  if(p.get('room')){document.querySelector('[data-tab="join"]').click();document.getElementById('joinCode').value=p.get('room').toUpperCase();}
+  if(p.get('room')){
+    document.getElementById('joinCodeWrap').style.display='block';
+    document.getElementById('joinCode').value=p.get('room').toUpperCase();
+  }
   Object.entries(myAvatar).forEach(([cat,val])=>{
     const el=document.querySelector(`.av-opt[data-cat="${cat}"][data-val="${val}"]`);
     if(el){document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));el.classList.add('active');}
   });
 });
 function setupLobbyUI(){
-  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('tab-create').style.display=t.dataset.tab==='create'?'block':'none';
-    document.getElementById('tab-join').style.display=t.dataset.tab==='join'?'block':'none';
-    document.getElementById('tab-public').style.display=t.dataset.tab==='public'?'block':'none';
-  }));
   document.getElementById('btnCreate').addEventListener('click',handleCreate);
-  document.getElementById('btnJoin').addEventListener('click',handleJoin);
   document.getElementById('btnPublic').addEventListener('click',handlePublic);
-  document.getElementById('createName').addEventListener('keydown',e=>{if(e.key==='Enter')handleCreate();});
+  document.getElementById('btnGoJoin').addEventListener('click',()=>{
+    const wrap=document.getElementById('joinCodeWrap');
+    wrap.style.display=wrap.style.display==='none'?'block':'none';
+  });
+  document.getElementById('btnJoin').addEventListener('click',handleJoin);
+  document.getElementById('playerName').addEventListener('keydown',e=>{if(e.key==='Enter')handleCreate();});
+  document.getElementById('joinCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
   document.getElementById('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')handleJoin();});
-  document.getElementById('publicName').addEventListener('keydown',e=>{if(e.key==='Enter')handlePublic();});
 }
 function handleCreate(){
-  const name=document.getElementById('createName').value.trim();
+  const name=document.getElementById('playerName').value.trim();
   if(!name){showError('createError','Necesitas un nombre');return;}
-  totalRounds=parseInt(document.getElementById('createRounds').value);
-  turnTime=parseInt(document.getElementById('createTime').value);
+  totalRounds=parseInt(document.getElementById('createRounds')?.value||5);
+  turnTime=parseInt(document.getElementById('createTime')?.value||90);
   wordChoiceCount=parseInt(document.getElementById('createWordCount')?.value||3);
   maxHintsOverride=parseInt(document.getElementById('createHints')?.value??-1);
   activeWordPool=buildWordPool();
-  if(activeWordPool.length<5){showError('createError','Añade al menos 5 palabras');return;}
+  if(activeWordPool.length<5){showError('createError','Añade al menos 5 palabras en temáticas o personalizadas');return;}
   myName=name;isHost=true;myId='p_'+Math.random().toString(36).slice(2,9);
   roomCode=genCode();players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
   connectWS();showScreen('avatar');setupAvatarEditor();
 }
 function handleJoin(){
-  const name=document.getElementById('joinName').value.trim();
+  const name=document.getElementById('playerName').value.trim();
   const code=document.getElementById('joinCode').value.trim().toUpperCase();
   if(!name){showError('joinError','Necesitas un nombre');return;}
   if(code.length!==4){showError('joinError','Código de 4 caracteres');return;}
@@ -841,50 +843,30 @@ function handleJoin(){
   roomCode=code;players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
   connectWS();showScreen('avatar');setupAvatarEditor();
 }
-
-// ── Modo público: pedir sala al servidor ──────────────────────
 function handlePublic(){
-  const name=document.getElementById('publicName').value.trim();
-  if(!name){showError('publicError','Necesitas un nombre');return;}
+  const name=document.getElementById('playerName').value.trim();
+  if(!name){showError('createError','Necesitas un nombre');return;}
   myName=name;isHost=false;myId='p_'+Math.random().toString(36).slice(2,9);
-  document.getElementById('publicStatus').textContent='Buscando sala pública…';
+  const statusEl=document.getElementById('publicStatus');
+  statusEl.style.display='block';
+  statusEl.textContent='Buscando sala pública…';
   document.getElementById('btnPublic').disabled=true;
-
-  // Conectar al servidor con room='PUBLIC' para que el servidor asigne sala
   const params=new URLSearchParams({room:'PUBLIC',id:myId,name:myName,public:'1'});
   ws=new WebSocket(`${WS_URL}?${params}`);
-
-  ws.onopen=()=>{
-    setStatus('🟢 Conectado','var(--ink)');
-    document.getElementById('publicStatus').textContent='Conectado, buscando sala…';
-  };
-  ws.onclose=()=>{
-    setStatus('🔴 Reconectando…','#c0392b');
-    document.getElementById('btnPublic').disabled=false;
-  };
+  ws.onopen=()=>{setStatus('🟢 Conectado','var(--ink)');statusEl.textContent='Conectado, buscando sala…';};
+  ws.onclose=()=>{setStatus('🔴 Reconectando…','#c0392b');document.getElementById('btnPublic').disabled=false;};
   ws.onerror=()=>{try{ws.close();}catch(_){}};
   ws.onmessage=(e)=>{
     let msg;try{msg=JSON.parse(e.data);}catch(_){return;}
-    // El servidor responde con la sala asignada
     if(msg.type==='publicAssigned'){
-      roomCode=msg.room;
-      isHost=msg.isHost||false;
+      roomCode=msg.room;isHost=msg.isHost||false;
       players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
-      if(msg.isHost){
-        // Si somos el host de la sala pública, cargar pool de palabras por defecto
-        activeWordPool=buildWordPool();
-        totalRounds=3;turnTime=90;wordChoiceCount=3;maxHintsOverride=-1;
-      }
-      document.getElementById('publicStatus').textContent=
-        msg.isHost?'Sala creada, esperando jugadores…':'¡Sala encontrada!';
-      // Reasignar handler de mensajes normal
+      if(msg.isHost){activeWordPool=buildWordPool();totalRounds=3;turnTime=90;wordChoiceCount=3;maxHintsOverride=-1;}
+      statusEl.textContent=msg.isHost?'Sala creada, esperando jugadores…':'¡Sala encontrada!';
       ws.onmessage=(e2)=>{let m;try{m=JSON.parse(e2.data);}catch(_){return;}handleMessage(m);};
       ws.onclose=()=>{setStatus('🔴 Reconectando…','#c0392b');if(!wsReconnectTimer)wsReconnectTimer=setTimeout(()=>{wsReconnectTimer=null;connectWS();},3000);};
       showScreen('avatar');setupAvatarEditor();
-    } else {
-      // Cualquier otro mensaje, procesar normal
-      handleMessage(msg);
-    }
+    }else{handleMessage(msg);}
   };
 }
 function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');}
