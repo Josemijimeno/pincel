@@ -239,30 +239,41 @@
     <h1>P<span class="r">IN</span>C<span class="b">EL</span></h1>
     <div class="logo-sub">El juego de dibujo en tiempo real</div>
   </div>
-  <div class="lobby-card">
-    <div class="field-group" style="margin-bottom:20px;">
-      <label>Tu nombre</label>
-      <input type="text" id="playerName" placeholder="Ej: Picasso" maxlength="16" autocomplete="off">
+  <!-- PASO 1: Avatar + nombre -->
+  <div class="lobby-card" style="width:min(520px,94vw);display:flex;flex-direction:column;gap:16px;">
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <!-- Mini preview del avatar -->
+      <div id="lobbyAvatarPreview" style="width:90px;height:110px;flex-shrink:0;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;" onclick="showScreen('avatarSetup')">
+        <div style="text-align:center;pointer-events:none;"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center;">
+        <div class="field-group" style="margin-bottom:0;">
+          <label>Tu nombre</label>
+          <input type="text" id="playerName" placeholder="Ej: Picasso" maxlength="16" autocomplete="off">
+        </div>
+        <button class="btn" onclick="showScreen('avatarSetup')" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);font-size:12px;padding:8px;border-radius:8px;">✏️ Editar personaje</button>
+      </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
+    <!-- Botones de modo -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
       <button class="btn btn-primary" id="btnCreate">🎨 Crear sala privada</button>
       <button class="btn btn-blue" id="btnGoJoin">🔑 Unirse con código</button>
-      <button class="btn" id="btnPublic" style="background:var(--success);color:#fff;border-color:var(--success);">🌍 Jugar con desconocidos</button>
+      <button class="btn" id="btnPublic" style="background:var(--success);color:#fff;border:none;">🌍 Jugar con desconocidos</button>
     </div>
-    <div id="joinCodeWrap" style="display:none;margin-top:14px;">
-      <div class="field-group">
+    <div id="joinCodeWrap" style="display:none;">
+      <div class="field-group" style="margin-bottom:8px;">
         <label>Código de sala</label>
-        <input type="text" id="joinCode" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:20px" autocomplete="off">
+        <input type="text" id="joinCode" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:20px;" autocomplete="off">
       </div>
       <div class="error-msg" id="joinError"></div>
       <button class="btn btn-blue" id="btnJoin">Unirse →</button>
     </div>
-    <div id="publicStatus" style="font-family:var(--mono);font-size:12px;color:var(--success);text-align:center;min-height:20px;margin-top:10px;display:none;"></div>
+    <div id="publicStatus" style="font-family:var(--mono);font-size:12px;color:var(--success);text-align:center;min-height:20px;display:none;"></div>
     <div class="error-msg" id="createError"></div>
   </div>
 </div>
 
-<div id="avatar" class="screen">
+<div id="avatarSetup" class="screen">
   <div class="avatar-wrap">
     <div class="avatar-left">
       <div class="avatar-title">Personaliza tu personaje</div>
@@ -354,47 +365,59 @@
           <div class="av-opt" data-cat="hat" data-val="beret">🎭</div>
         </div>
       </div>
-      <button class="btn btn-primary" id="btnAvatarDone" style="margin-top:16px;">¡Listo! →</button>
-      <!-- Configuración de partida — solo visible si eres el host -->
-      <div id="hostConfig" style="display:none;margin-top:20px;border-top:2px solid var(--ink);padding-top:16px;">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;opacity:.5;margin-bottom:12px;">⚙️ Configuración de partida</div>
-        <div class="config-grid">
-          <div class="config-row">
-            <div class="config-icon">👥</div>
-            <div class="config-label">Jugadores máx.</div>
-            <select id="createPlayers" class="config-select"><option value="2">2</option><option value="4">4</option><option value="6">6</option><option value="8" selected>8</option></select>
-          </div>
-          <div class="config-row">
-            <div class="config-icon">⏱️</div>
-            <div class="config-label">Tiempo dibujo</div>
-            <select id="createTime" class="config-select"><option value="60">60 seg</option><option value="80">80 seg</option><option value="90" selected>90 seg</option><option value="120">120 seg</option><option value="150">150 seg</option></select>
-          </div>
-          <div class="config-row">
-            <div class="config-icon">🔄</div>
-            <div class="config-label">Rondas</div>
-            <select id="createRounds" class="config-select"><option value="2">2</option><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="10">10</option></select>
-          </div>
-          <div class="config-row">
-            <div class="config-icon">📝</div>
-            <div class="config-label">Opciones de palabra</div>
-            <select id="createWordCount" class="config-select"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
-          </div>
-          <div class="config-row">
-            <div class="config-icon">💡</div>
-            <div class="config-label">Pistas</div>
-            <select id="createHints" class="config-select"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
-          </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn" id="btnAvatarBack" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);">← Volver</button>
+        <button class="btn btn-primary" id="btnAvatarDone" style="flex:1;">¡Listo! →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="roomConfig" class="screen">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:24px;gap:20px;">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:.5;">⚙️ Configuración de partida</div>
+    <div style="width:min(480px,94vw);display:flex;flex-direction:column;gap:12px;">
+      <div class="config-grid">
+        <div class="config-row">
+          <div class="config-icon">👥</div>
+          <div class="config-label">Jugadores máx.</div>
+          <select id="createPlayers" class="config-select"><option value="2">2</option><option value="4">4</option><option value="6">6</option><option value="8" selected>8</option></select>
         </div>
-        <div class="section-title">🎨 Temáticas</div>
-        <div style="font-family:var(--mono);font-size:11px;opacity:.5;margin-bottom:8px;">Sin selección = todas mezcladas.</div>
-        <div class="selected-themes" id="selectedThemes"></div>
-        <div class="themes-grid" id="themesGrid"></div>
-        <div class="section-title">✏️ Palabras personalizadas</div>
-        <div class="field-group">
-          <label>Separadas por comas</label>
-          <textarea id="customWords" placeholder="silla, elefante, guitarra..."></textarea>
-          <div class="word-count-badge" id="customWordCount">0 palabras</div>
+        <div class="config-row">
+          <div class="config-icon">⏱️</div>
+          <div class="config-label">Tiempo dibujo</div>
+          <select id="createTime" class="config-select"><option value="60">60 seg</option><option value="80">80 seg</option><option value="90" selected>90 seg</option><option value="120">120 seg</option><option value="150">150 seg</option></select>
         </div>
+        <div class="config-row">
+          <div class="config-icon">🔄</div>
+          <div class="config-label">Rondas</div>
+          <select id="createRounds" class="config-select"><option value="2">2</option><option value="3">3</option><option value="5" selected>5</option><option value="7">7</option><option value="10">10</option></select>
+        </div>
+        <div class="config-row">
+          <div class="config-icon">📝</div>
+          <div class="config-label">Opciones de palabra</div>
+          <select id="createWordCount" class="config-select"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
+        </div>
+        <div class="config-row">
+          <div class="config-icon">💡</div>
+          <div class="config-label">Pistas</div>
+          <select id="createHints" class="config-select"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+        </div>
+      </div>
+      <div class="section-title" style="margin-top:8px;">🎨 Temáticas de palabras</div>
+      <div style="font-family:var(--mono);font-size:11px;opacity:.5;margin-bottom:4px;">Sin selección = todas mezcladas.</div>
+      <div class="selected-themes" id="selectedThemes"></div>
+      <div class="themes-grid" id="themesGrid"></div>
+      <div class="section-title">✏️ Palabras personalizadas</div>
+      <div class="field-group">
+        <label>Separadas por comas</label>
+        <textarea id="customWords" placeholder="silla, elefante, guitarra..." rows="3"></textarea>
+        <div class="word-count-badge" id="customWordCount">0 palabras</div>
+      </div>
+      <div class="error-msg" id="configError"></div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button class="btn" id="btnConfigBack" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);">← Volver</button>
+        <button class="btn btn-primary" id="btnConfigStart" style="flex:1;">🎮 Crear sala →</button>
       </div>
     </div>
   </div>
@@ -807,12 +830,13 @@ function buildMaskedDisplay(arr){
 //  AVATAR EDITOR
 // ══════════════════════════════════════════════════════════════
 function setupAvatarEditor(){
-  // Mostrar configuración solo si eres el host
-  const hostConfig=document.getElementById('hostConfig');
-  if(hostConfig)hostConfig.style.display=isHost?'block':'none';
-  // Inicializar temáticas si es host
-  if(isHost){buildThemesGrid();updateSelectedTags();}
-  function redraw(){document.getElementById('avatarPreviewBox').innerHTML=makeSVGAvatar(myAvatar,176,216);}
+  // Refrescar preview y nombre
+  function redraw(){
+    const box=document.getElementById('avatarPreviewBox');
+    if(box)box.innerHTML=makeSVGAvatar(myAvatar,176,216);
+    // Actualizar también el mini preview del lobby
+    updateLobbyAvatarPreview();
+  }
   redraw();
   document.querySelectorAll('.av-opt').forEach(el=>{
     el.addEventListener('click',()=>{
@@ -827,12 +851,28 @@ function setupAvatarEditor(){
     const el=document.querySelector(`.av-opt[data-cat="${cat}"][data-val="${val}"]`);
     if(el){document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));el.classList.add('active');}
   });
-  document.getElementById('avatarNameDisplay').textContent=myName;
-  document.getElementById('btnAvatarDone').addEventListener('click',()=>{
-    localStorage.setItem('pincelAvatar',JSON.stringify(myAvatar));
-    showScreen('waiting');setupWaitingRoom();
-    if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'player-join',from:myId,fromName:myName,data:{name:myName,isHost,avatar:myAvatar}}));
-  });
+  const nameDisplay=document.getElementById('avatarNameDisplay');
+  if(nameDisplay)nameDisplay.textContent=myName||'Tu nombre';
+  // Botón volver al lobby
+  const btnBack=document.getElementById('btnAvatarBack');
+  if(btnBack){
+    btnBack.onclick=()=>showScreen('lobby');
+  }
+  // Botón listo — solo guarda y vuelve al lobby
+  const btnDone=document.getElementById('btnAvatarDone');
+  if(btnDone){
+    btnDone.onclick=()=>{
+      localStorage.setItem('pincelAvatar',JSON.stringify(myAvatar));
+      updateLobbyAvatarPreview();
+      showScreen('lobby');
+    };
+  }
+}
+
+// Mini preview del avatar en el lobby
+function updateLobbyAvatarPreview(){
+  const box=document.getElementById('lobbyAvatarPreview');
+  if(box)box.innerHTML=makeMiniSVG(myAvatar,80);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -855,15 +895,21 @@ window.addEventListener('DOMContentLoaded',()=>{
   setupLobbyUI();
   canvas=document.getElementById('drawCanvas');ctx=canvas.getContext('2d');
   setupCanvas();setupToolbar();setupChat();
+  // Inicializar editor de avatar (pantalla separada)
+  setupAvatarEditor();
+  // Mostrar mini avatar en lobby desde el inicio
+  updateLobbyAvatarPreview();
+  // Aplicar avatar guardado en los controles
+  Object.entries(myAvatar).forEach(([cat,val])=>{
+    const el=document.querySelector(`.av-opt[data-cat="${cat}"][data-val="${val}"]`);
+    if(el){document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));el.classList.add('active');}
+  });
+  // Si hay código en la URL, mostrar campo de código
   const p=new URLSearchParams(location.search);
   if(p.get('room')){
     document.getElementById('joinCodeWrap').style.display='block';
     document.getElementById('joinCode').value=p.get('room').toUpperCase();
   }
-  Object.entries(myAvatar).forEach(([cat,val])=>{
-    const el=document.querySelector(`.av-opt[data-cat="${cat}"][data-val="${val}"]`);
-    if(el){document.querySelectorAll(`.av-opt[data-cat="${cat}"]`).forEach(x=>x.classList.remove('active'));el.classList.add('active');}
-  });
 });
 function setupLobbyUI(){
   document.getElementById('btnCreate').addEventListener('click',handleCreate);
@@ -871,6 +917,7 @@ function setupLobbyUI(){
   document.getElementById('btnGoJoin').addEventListener('click',()=>{
     const wrap=document.getElementById('joinCodeWrap');
     wrap.style.display=wrap.style.display==='none'?'block':'none';
+    if(wrap.style.display==='block')document.getElementById('joinCode').focus();
   });
   document.getElementById('btnJoin').addEventListener('click',handleJoin);
   document.getElementById('playerName').addEventListener('keydown',e=>{if(e.key==='Enter')handleCreate();});
@@ -880,15 +927,31 @@ function setupLobbyUI(){
 function handleCreate(){
   const name=document.getElementById('playerName').value.trim();
   if(!name){showError('createError','Necesitas un nombre');return;}
-  totalRounds=parseInt(document.getElementById('createRounds')?.value||5);
-  turnTime=parseInt(document.getElementById('createTime')?.value||90);
-  wordChoiceCount=parseInt(document.getElementById('createWordCount')?.value||3);
-  maxHintsOverride=parseInt(document.getElementById('createHints')?.value??-1);
-  activeWordPool=buildWordPool();
-  if(activeWordPool.length<5){showError('createError','Añade al menos 5 palabras en temáticas o personalizadas');return;}
-  myName=name;isHost=true;myId='p_'+Math.random().toString(36).slice(2,9);
-  roomCode=genCode();players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
-  connectWS();showScreen('avatar');setupAvatarEditor();
+  myName=name;isHost=true;
+  // Ir a pantalla de configuración de sala
+  showScreen('roomConfig');
+  setupRoomConfig();
+}
+
+function setupRoomConfig(){
+  // Inicializar temáticas en la pantalla de config
+  buildThemesGrid();updateSelectedTags();
+  // Botón volver
+  document.getElementById('btnConfigBack').onclick=()=>showScreen('lobby');
+  // Botón crear sala
+  document.getElementById('btnConfigStart').onclick=()=>{
+    totalRounds=parseInt(document.getElementById('createRounds').value||5);
+    turnTime=parseInt(document.getElementById('createTime').value||90);
+    wordChoiceCount=parseInt(document.getElementById('createWordCount').value||3);
+    maxHintsOverride=parseInt(document.getElementById('createHints').value??-1);
+    activeWordPool=buildWordPool();
+    if(activeWordPool.length<5){showError('configError','Añade al menos 5 palabras');return;}
+    myId='p_'+Math.random().toString(36).slice(2,9);
+    roomCode=genCode();
+    players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
+    connectWS();
+    showScreen('waiting');setupWaitingRoom();
+  };
 }
 function handleJoin(){
   const name=document.getElementById('playerName').value.trim();
@@ -897,7 +960,8 @@ function handleJoin(){
   if(code.length!==4){showError('joinError','Código de 4 caracteres');return;}
   myName=name;isHost=false;myId='p_'+Math.random().toString(36).slice(2,9);
   roomCode=code;players[myId]={name:myName,score:0,guessed:false,avatar:myAvatar};
-  connectWS();showScreen('avatar');setupAvatarEditor();
+  connectWS();
+  showScreen('waiting');setupWaitingRoom();
 }
 function handlePublic(){
   const name=document.getElementById('playerName').value.trim();
@@ -921,7 +985,8 @@ function handlePublic(){
       statusEl.textContent=msg.isHost?'Sala creada, esperando jugadores…':'¡Sala encontrada!';
       ws.onmessage=(e2)=>{let m;try{m=JSON.parse(e2.data);}catch(_){return;}handleMessage(m);};
       ws.onclose=()=>{setStatus('🔴 Reconectando…','#c0392b');if(!wsReconnectTimer)wsReconnectTimer=setTimeout(()=>{wsReconnectTimer=null;connectWS();},3000);};
-      showScreen('avatar');setupAvatarEditor();
+      // Ir directo a sala de espera, sin avatar editor
+      showScreen('waiting');setupWaitingRoom();
     }else{handleMessage(msg);}
   };
 }
@@ -934,6 +999,10 @@ function setupWaitingRoom(){
   try{history.replaceState(null,'',location.pathname+'?room='+roomCode);}catch(_){}
   document.getElementById('btnStart').onclick=startGame;
   if(isHost){const names=[...selectedThemes].map(k=>THEMES[k].emoji+' '+THEMES[k].name);document.getElementById('activeThemesBadge').textContent=names.length>0?'Temáticas: '+names.join(', '):'🎲 Todas las temáticas · '+activeWordPool.length+' palabras';}
+  // Anunciar presencia con avatar al llegar a la sala de espera
+  if(ws&&ws.readyState===WebSocket.OPEN){
+    ws.send(JSON.stringify({type:'player-join',from:myId,fromName:myName,data:{name:myName,isHost,avatar:myAvatar}}));
+  }
   updatePlayersGrid();
 }
 
@@ -1279,9 +1348,6 @@ function procesarAdivinanza(senderId,senderName,text){
       const nonDrawers=Object.keys(players).filter(id=>id!==currentDrawerId);
       if(nonDrawers.every(id=>players[id].guessed)&&isDrawing)setTimeout(()=>endTurn(),1000);
     }
-  }else if(currentWord){
-    if(isClose(norm(text),norm(currentWord))&&senderId===myId)addChat({type:'close',name:senderName,text:'¡Muy cerca!'});
-  }
 }
 function procesarCerca(senderId,senderName,textNorm,wordNorm){
   if(senderId===myId&&isClose(textNorm,wordNorm)){
